@@ -1,0 +1,15 @@
+{
+    "name": "lelantos-bench",
+    "private": true,
+    "version": "0.0.0",
+    "description": "LAN Groth16 proof bench against vendored snarkjs.",
+    "scripts": {
+        "prepare-input": "ts-node prepare.ts",
+        "serve": "ts-node server.ts"
+    },
+    "devDependencies": {
+        "@types/node": "^20.14.10",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.5.3"
+    }
+}
