@@ -14,7 +14,7 @@ import {
     dummyInputAt,
     type Note,
 } from "../circuits/src/test/helpers";
-import { flatten, fiatShamirZ } from "../sdk/src/snark-compression";
+import { flatten, fiatShamirZ } from "@lelantos-org/sdk";
 
 const DEPTH = 10;
 const ASSET = 1n;

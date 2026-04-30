@@ -15,6 +15,7 @@ import { extname, join, normalize, resolve } from "path";
 const ROOT = resolve(__dirname, "..");
 const PUBLIC = resolve(__dirname, "public");
 const PROVER_PKG = resolve(__dirname, "prover-pkg");
+const SDK_WASM = resolve(__dirname, "node_modules", "@lelantos-org", "sdk", "wasm");
 const RESULTS = resolve(__dirname, "results.json");
 const CIRCUITS = resolve(ROOT, "circuits", "build");
 
@@ -167,6 +168,11 @@ function routeStaticGet(path: string, res: ServerResponse): boolean {
     }
     if (path.startsWith("/prover/")) {
         const file = safeJoin(PROVER_PKG, path.slice("/prover/".length));
+        file ? streamFile(res, file) : send(res, 403, "forbidden");
+        return true;
+    }
+    if (path.startsWith("/wasm/")) {
+        const file = safeJoin(SDK_WASM, path.slice("/wasm/".length));
         file ? streamFile(res, file) : send(res, 403, "forbidden");
         return true;
     }

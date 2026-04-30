@@ -6,12 +6,15 @@
     "scripts": {
         "prepare-input": "ts-node prepare.ts",
         "serve": "ts-node server.ts",
-        "scan-bench-build": "esbuild src/scan-worker.ts --bundle --format=esm --target=es2022 --platform=browser --external:node:* --alias:circomlibjs=./src/circomlibjs-stub.js --outfile=public/bench.scan.worker.js && cp ../sdk/wasm/jubjub/pkg/jubjub_wasm_bg.wasm public/jubjub_wasm_bg.wasm"
+        "scan-bench-build": "esbuild src/scan-worker.ts --bundle --format=esm --target=es2022 --platform=browser --external:node:* --alias:circomlibjs=./src/circomlibjs-stub.js --outfile=public/bench.scan.worker.js && cp node_modules/@lelantos-org/sdk/wasm/jubjub/pkg/jubjub_wasm_bg.wasm public/jubjub_wasm_bg.wasm"
     },
     "devDependencies": {
         "@types/node": "^20.14.10",
         "esbuild": "^0.24.0",
         "ts-node": "^10.9.2",
         "typescript": "^5.5.3"
+    },
+    "dependencies": {
+        "@lelantos-org/sdk": "^0.1.0"
     }
 }

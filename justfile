@@ -25,9 +25,8 @@ prover-build:
     @echo "copied {{PROVER}}/pkg -> bench/prover-pkg"
 
 # Build the wallet-scan bench worker (esbuild bundles SDK + WasmJubjub).
-# Re-run after editing bench/src/scan-worker.ts or sdk/src/**.
+# Re-run after editing bench/src/scan-worker.ts.
 scan-build: install
-    cd "{{WASM_WORKSPACE}}" && just jubjub-build
     cd "{{BENCH}}" && npm run scan-bench-build
 
 # Run LAN benchmark webserver on :8787 (override with PORT=).

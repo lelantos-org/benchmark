@@ -2,27 +2,24 @@
 // node-flavored (pulls assert/buffer/events) and would bloat the bundle by
 // ~MB; we generate synthetic notes using WASM primitives directly.
 
-import { WasmJubjub } from "../../sdk/src/crypto/jubjub-wasm";
 import {
+    WasmJubjub,
     BABYJUB_SUBGROUP_ORDER,
     type Field,
     type Jubjub,
     type Point,
-} from "../../sdk/src/crypto/index";
-import { encryptNote } from "../../sdk/src/note-encrypt";
-import {
+    encryptNote,
     encodeNotePayload,
     withClueBitsPrefix,
     clueBitsToPrefix,
-} from "../../sdk/src/note-codec";
-import {
     fmdFlag,
     fmdGenDetectionKey,
     fmdFlagKeyFromDetection,
     type FmdDetectionKey,
     type FmdFlagKey,
-} from "../../sdk/src/fmd";
-import { scanNotes, type ScanInput } from "../../sdk/src/sync";
+    scanNotes,
+    type ScanInput,
+} from "@lelantos-org/sdk";
 
 interface PrepareReq { type: "prepare" }
 interface RunReq { type: "run"; n: number; mineFrac: number }
