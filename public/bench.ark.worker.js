@@ -1,7 +1,7 @@
 // Module worker: ark-circom + ark-groth16 (Rust → WASM, rayon-parallel).
 // Loads the wasm pkg, plus snarkjs witness_calculator.js for witgen.
 
-import init, { initThreadPool, ProverSession } from "/rust-prover/rust_prover.js";
+import init, { initThreadPool, ProverSession } from "/prover/prover.js";
 
 let session = null;
 let witCalc = null;

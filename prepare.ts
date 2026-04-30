@@ -13,7 +13,6 @@ import {
     toCircomInput,
     dummyInputAt,
     type Note,
-    type Field,
 } from "../circuits/src/test/helpers";
 import { flatten, fiatShamirZ } from "../sdk/src/snark-compression";
 
@@ -25,43 +24,37 @@ const RECIPIENT = 0xbeefn;
 const CHAIN_ID = 31337n;
 const ALICE_NSK = 11n;
 
+const OUTPUT_PATH = resolve(__dirname, "public", "input.json");
+
 async function main() {
     const P = await Poseidon.build();
     const J = await Jubjub.build();
 
     const tree = new MerkleTree(P, DEPTH);
-    const root = tree.root();
+    const aliceP = derivePk(P, ALICE_NSK);
 
-    const dA = dummyInputAt(P, DEPTH, 0n);
-    const dB = dummyInputAt(P, DEPTH, 1n);
-
-    const aliceP: Field = derivePk(P, ALICE_NSK);
     const realOut: Note = { asset: ASSET, value: PUBLIC_IN, pk: aliceP, rho: 9n,  rcm: 10n, rcv: 11n };
     const padOut:  Note = { asset: ASSET, value: 0n,        pk: aliceP, rho: 12n, rcm: 13n, rcv: 14n };
 
-    const pubGen = J.hashToAssetGen(ASSET);
-
     const baseInput = toCircomInput(P, J, {
-        publicAssetId: ASSET,
-        publicAssetGen: pubGen,
-        publicIn: PUBLIC_IN,
-        publicOut: PUBLIC_OUT,
-        inputs: [dA, dB],
-        outputs: [realOut, padOut],
-        merkleRoot: root,
+        publicAssetId:   ASSET,
+        publicAssetGen:  J.hashToAssetGen(ASSET),
+        publicIn:        PUBLIC_IN,
+        publicOut:       PUBLIC_OUT,
+        inputs:          [dummyInputAt(P, DEPTH, 0n), dummyInputAt(P, DEPTH, 1n)],
+        outputs:         [realOut, padOut],
+        merkleRoot:      tree.root(),
         recipientAddress: RECIPIENT,
-        chainId: CHAIN_ID,
-        z: 0n,
+        chainId:         CHAIN_ID,
+        z:               0n,
     });
 
-    const coeffs = flatten(baseInput as any);
-    const z = fiatShamirZ(coeffs);
+    const z = fiatShamirZ(flatten(baseInput as any));
     const input = { ...baseInput, z: z.toString() };
 
-    const out = resolve(__dirname, "public", "input.json");
-    mkdirSync(dirname(out), { recursive: true });
-    writeFileSync(out, JSON.stringify(input, null, 2) + "\n");
-    console.log(`wrote -> ${out}`);
+    mkdirSync(dirname(OUTPUT_PATH), { recursive: true });
+    writeFileSync(OUTPUT_PATH, JSON.stringify(input, null, 2) + "\n");
+    console.log(`wrote -> ${OUTPUT_PATH}`);
 }
 
 main().catch(e => { console.error(e); process.exit(1); });

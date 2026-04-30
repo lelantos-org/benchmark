@@ -11,7 +11,7 @@
   table { border-collapse: collapse; width: 100%; margin-top: 1rem; }
   th, td { border: 1px solid #ccc; padding: .3rem .5rem; text-align: right; }
   th:first-child, td:first-child { text-align: left; }
-  #log { white-space: pre-wrap; background: #f4f4f4; padding: .5rem; min-height: 6em; font-family: ui-monospace, monospace; font-size: 12px; }
+  #log, #scan-log { white-space: pre-wrap; background: #f4f4f4; padding: .5rem; min-height: 6em; font-family: ui-monospace, monospace; font-size: 12px; }
   .row { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; margin: .5rem 0; }
   .ok { color: #060; } .err { color: #c00; }
 </style>
@@ -30,6 +30,17 @@
   </tr></thead>
   <tbody></tbody>
 </table>
+
+<h1 style="margin-top:2rem">Wallet scan throughput (WasmJubjub)</h1>
+<div class="row">
+  <button id="run-scan">Run scan benchmark</button>
+  <label>notes: <input id="scan-n" type="number" value="1000" min="100" max="100000" style="width:6em" /></label>
+  <label>mine %: <input id="scan-mine" type="number" value="5" min="0" max="100" style="width:4em" /></label>
+  <span id="scan-status"></span>
+</div>
+<div id="scan-log"></div>
+
 <script src="/bench.js"></script>
+<script src="/scan-bench.js"></script>
 </body>
 </html>

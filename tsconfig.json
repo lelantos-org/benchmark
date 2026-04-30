@@ -9,5 +9,10 @@
         "resolveJsonModule": true,
         "ignoreDeprecations": "6.0"
     },
-    "include": ["*.ts", "../circuits/src/**/*.ts", "../sdk/src/**/*.ts"]
+    "include": ["*.ts", "src/**/*.ts", "../circuits/src/**/*.ts", "../sdk/src/**/*.ts"],
+    "exclude": [
+        "node_modules",
+        "../circuits/src/**/*.test.ts",
+        "../sdk/src/**/*.test.ts"
+    ]
 }

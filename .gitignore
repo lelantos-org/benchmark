@@ -1,3 +1,4 @@
 .certs
 results.json
-rust-prover-pkg/
+prover-pkg/
+node_modules

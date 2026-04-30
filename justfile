@@ -2,7 +2,8 @@ set shell := ["bash", "-ceuo", "pipefail"]
 
 ROOT := justfile_directory() / ".."
 BENCH := justfile_directory()
-RUST_PROVER := ROOT / "rust-prover"
+WASM_WORKSPACE := ROOT / "sdk" / "wasm"
+PROVER := WASM_WORKSPACE / "prover"
 
 default:
     @just --list
@@ -15,13 +16,19 @@ install:
 prepare: install
     cd "{{BENCH}}" && ./node_modules/.bin/ts-node prepare.ts
 
-# Build the Rust ark-circom prover and copy the wasm-pack output into bench/rust-prover-pkg/.
+# Build the Rust ark-circom prover and copy the wasm-pack output into bench/prover-pkg/.
 # Requires nightly toolchain + rust-src component + wasm-pack on PATH.
-rust-prover-build:
-    cd "{{RUST_PROVER}}" && just build
-    rm -rf "{{BENCH}}/rust-prover-pkg"
-    cp -R "{{RUST_PROVER}}/pkg" "{{BENCH}}/rust-prover-pkg"
-    @echo "copied rust-prover/pkg -> bench/rust-prover-pkg"
+prover-build:
+    cd "{{WASM_WORKSPACE}}" && just prover-build
+    rm -rf "{{BENCH}}/prover-pkg"
+    cp -R "{{PROVER}}/pkg" "{{BENCH}}/prover-pkg"
+    @echo "copied {{PROVER}}/pkg -> bench/prover-pkg"
+
+# Build the wallet-scan bench worker (esbuild bundles SDK + WasmJubjub).
+# Re-run after editing bench/src/scan-worker.ts or sdk/src/**.
+scan-build: install
+    cd "{{WASM_WORKSPACE}}" && just jubjub-build
+    cd "{{BENCH}}" && npm run scan-bench-build
 
 # Run LAN benchmark webserver on :8787 (override with PORT=).
 # HTTPS-only (self-signed cert auto-generated): multi-thread Rust prover on
