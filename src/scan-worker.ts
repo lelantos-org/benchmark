@@ -3,7 +3,8 @@
 // ~MB; we generate synthetic notes using WASM primitives directly.
 
 import {
-    WasmJubjub,
+    buildJubjub,
+    Poseidon,
     BABYJUB_SUBGROUP_ORDER,
     type Field,
     type Jubjub,
@@ -36,7 +37,8 @@ interface ScanResultMsg {
 interface Identity { ivk: Field; pkD: Point; fk: FmdFlagKey }
 
 interface State {
-    W: WasmJubjub;
+    J: Jubjub;
+    P: Poseidon;
     me: Identity;
     eve: Identity;
     dk: FmdDetectionKey;
@@ -47,25 +49,22 @@ let state: State | null = null;
 const post = (msg: unknown): void =>
     (self as unknown as { postMessage: (m: unknown) => void }).postMessage(msg);
 
-// SDK types `Jubjub` as the JS interface; WasmJubjub is structurally compatible.
-const asJ = (w: WasmJubjub): Jubjub => w as unknown as Jubjub;
-
-function makeIdentity(W: WasmJubjub, ivkSeed: bigint, dkSeed: bigint): Identity {
+function makeIdentity(J: Jubjub, ivkSeed: bigint, dkSeed: bigint): Identity {
     const ivk = ivkSeed % BABYJUB_SUBGROUP_ORDER || 1n;
-    const pkD = W.mulPointEscalar(W.base8, ivk);
+    const pkD = J.mulPointEscalar(J.base8, ivk);
     const dk = fmdGenDetectionKey(() => dkSeed);
-    const fk = fmdFlagKeyFromDetection(asJ(W), dk);
+    const fk = fmdFlagKeyFromDetection(J, dk);
     return { ivk, pkD, fk };
 }
 
 async function prepare(): Promise<void> {
     // Synthetic keys: ivk = random scalar, pk_d = base8 · ivk. Bench measures
     // scan, not on-chain ops — no real SpendingKey required.
-    const W = await WasmJubjub.build();
-    const me = makeIdentity(W, 1234n, 7n);
-    const eve = makeIdentity(W, 9999n, 13n);
+    const [J, P] = await Promise.all([buildJubjub(), Poseidon.build()]);
+    const me = makeIdentity(J, 1234n, 7n);
+    const eve = makeIdentity(J, 9999n, 13n);
     const dk = fmdGenDetectionKey(() => 7n); // matches `me`
-    state = { W, me, eve, dk };
+    state = { J, P, me, eve, dk };
     post({ type: "prepared" });
 }
 
@@ -75,9 +74,8 @@ function rand(seed: number): bigint {
 
 function buildNote(s: State, i: number, mine: boolean): ScanInput {
     const id = mine ? s.me : s.eve;
-    const J = asJ(s.W);
     const enc = encryptNote({
-        J,
+        J: s.J,
         recipientPkD: id.pkD,
         esk: rand(i + 1),
         plaintext: encodeNotePayload({
@@ -87,7 +85,7 @@ function buildNote(s: State, i: number, mine: boolean): ScanInput {
             rcm: BigInt(i + 2000),
         }),
     });
-    const clue = fmdFlag(J, id.fk, rand(i + 12345));
+    const clue = fmdFlag(s.J, s.P, id.fk, rand(i + 12345));
     const wire = withClueBitsPrefix(
         clueBitsToPrefix(clue.bits, clue.gamma),
         enc.ciphertext,
@@ -105,14 +103,13 @@ function buildBatch(s: State, n: number, mineFrac: number): ScanInput[] {
 async function run(req: RunReq): Promise<void> {
     if (!state) throw new Error("worker not prepared");
     const s = state;
-    const J = asJ(s.W);
     const inputs = buildBatch(s, req.n, req.mineFrac);
 
     // warm
-    scanNotes(J, s.me.ivk, inputs.slice(0, Math.min(50, inputs.length)), s.dk);
+    scanNotes(s.J, s.P, s.me.ivk, inputs.slice(0, Math.min(50, inputs.length)), s.dk);
 
     const t0 = performance.now();
-    const hits = scanNotes(J, s.me.ivk, inputs, s.dk);
+    const hits = scanNotes(s.J, s.P, s.me.ivk, inputs, s.dk);
     const totalMs = performance.now() - t0;
 
     const result: ScanResultMsg = {

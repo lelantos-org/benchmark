@@ -15,6 +15,6 @@
         "typescript": "^5.5.3"
     },
     "dependencies": {
-        "@lelantos-org/sdk": "^0.1.0"
+        "@lelantos-org/sdk": "file:../sdk"
     }
 }

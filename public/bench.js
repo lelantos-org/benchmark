@@ -75,7 +75,7 @@ async function refreshTable() {
 }
 
 // ── worker session (RPC over postMessage, sequential) ───────────────────────
-function makeSession(zkeyU8, wasmU8) {
+function makeSession() {
     const w = new Worker("/bench.ark.worker.js", { type: "module" });
     const debugEvents = [];
     let pending = null;       // { resolve, reject } for in-flight call
@@ -104,7 +104,8 @@ function makeSession(zkeyU8, wasmU8) {
     }));
 
     return {
-        prepare: () => send({ type: "prepare", zkey: zkeyU8, wasm: wasmU8 }, [zkeyU8.buffer, wasmU8.buffer]),
+        prepare: (zkeyU8, wasmU8) =>
+            send({ type: "prepare", zkey: zkeyU8, wasm: wasmU8 }, [zkeyU8.buffer, wasmU8.buffer]),
         prove:   (input) => send({ type: "prove", input }),
         dispose: async () => { await send({ type: "dispose" }); w.terminate(); },
         debugEvents,
@@ -133,8 +134,8 @@ async function run() {
 
         setStatus("preparing session…");
         const tPrep = performance.now();
-        session = makeSession(zkeyU8, wasmU8);
-        const prep = await session.prepare();
+        session = makeSession();
+        const prep = await session.prepare(zkeyU8, wasmU8);
         log(`threads=${prep?.threads} isolated=${!!prep?.isolated}`);
         const prepareMs = performance.now() - tPrep;
         log(`prepare: ${prepareMs.toFixed(0)} ms`);
