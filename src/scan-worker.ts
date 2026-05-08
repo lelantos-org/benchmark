@@ -1,23 +1,17 @@
-// Browser scan-throughput bench worker. WasmJubjub-only — circomlibjs is
-// node-flavored (pulls assert/buffer/events) and would bloat the bundle by
-// ~MB; we generate synthetic notes using WASM primitives directly.
+// Browser scan-throughput bench worker. Measures decrypt-only throughput:
+// no FMD pre-filter, so no Poseidon required (avoids pulling circomlibjs +
+// node polyfills into the bundle). WasmJubjub provides ECDH + ChaCha path.
 
 import {
     buildJubjub,
-    Poseidon,
     BABYJUB_SUBGROUP_ORDER,
     type Field,
     type Jubjub,
     type Point,
+    type Poseidon,
     encryptNote,
     encodeNotePayload,
     withClueBitsPrefix,
-    clueBitsToPrefix,
-    fmdFlag,
-    fmdGenDetectionKey,
-    fmdFlagKeyFromDetection,
-    type FmdDetectionKey,
-    type FmdFlagKey,
     scanNotes,
     type ScanInput,
 } from "@lelantos-org/sdk";
@@ -34,14 +28,13 @@ interface ScanResultMsg {
     notesPerSec: number;
 }
 
-interface Identity { ivk: Field; pkD: Point; fk: FmdFlagKey }
+interface Identity { ivk: Field; pkD: Point }
 
 interface State {
     J: Jubjub;
     P: Poseidon;
     me: Identity;
     eve: Identity;
-    dk: FmdDetectionKey;
 }
 
 let state: State | null = null;
@@ -49,22 +42,20 @@ let state: State | null = null;
 const post = (msg: unknown): void =>
     (self as unknown as { postMessage: (m: unknown) => void }).postMessage(msg);
 
-function makeIdentity(J: Jubjub, ivkSeed: bigint, dkSeed: bigint): Identity {
+function makeIdentity(J: Jubjub, ivkSeed: bigint): Identity {
     const ivk = ivkSeed % BABYJUB_SUBGROUP_ORDER || 1n;
     const pkD = J.mulPointEscalar(J.base8, ivk);
-    const dk = fmdGenDetectionKey(() => dkSeed);
-    const fk = fmdFlagKeyFromDetection(J, dk);
-    return { ivk, pkD, fk };
+    return { ivk, pkD };
 }
 
 async function prepare(): Promise<void> {
-    // Synthetic keys: ivk = random scalar, pk_d = base8 · ivk. Bench measures
-    // scan, not on-chain ops — no real SpendingKey required.
-    const [J, P] = await Promise.all([buildJubjub(), Poseidon.build()]);
-    const me = makeIdentity(J, 1234n, 7n);
-    const eve = makeIdentity(J, 9999n, 13n);
-    const dk = fmdGenDetectionKey(() => 7n); // matches `me`
-    state = { J, P, me, eve, dk };
+    const J = await buildJubjub();
+    // Decrypt-only bench: scanNotes never touches P when no detectionKey is
+    // passed, so a no-op stub satisfies the type without bundling Poseidon.
+    const P = { hash: () => 0n } as unknown as Poseidon;
+    const me = makeIdentity(J, 1234n);
+    const eve = makeIdentity(J, 9999n);
+    state = { J, P, me, eve };
     post({ type: "prepared" });
 }
 
@@ -85,12 +76,10 @@ function buildNote(s: State, i: number, mine: boolean): ScanInput {
             rcm: BigInt(i + 2000),
         }),
     });
-    const clue = fmdFlag(s.J, s.P, id.fk, rand(i + 12345));
-    const wire = withClueBitsPrefix(
-        clueBitsToPrefix(clue.bits, clue.gamma),
-        enc.ciphertext,
-    );
-    return { ciphertext: wire, epk: enc.epk, cm: BigInt(i), leafIndex: i, clue };
+    // scanNotes -> stripClueBitsPrefix expects a 2B prefix even without FMD;
+    // pad with zeros since we run no detection-key path.
+    const wire = withClueBitsPrefix(new Uint8Array(2), enc.ciphertext);
+    return { ciphertext: wire, epk: enc.epk, cm: BigInt(i), leafIndex: i };
 }
 
 function buildBatch(s: State, n: number, mineFrac: number): ScanInput[] {
@@ -106,10 +95,10 @@ async function run(req: RunReq): Promise<void> {
     const inputs = buildBatch(s, req.n, req.mineFrac);
 
     // warm
-    scanNotes(s.J, s.P, s.me.ivk, inputs.slice(0, Math.min(50, inputs.length)), s.dk);
+    scanNotes(s.J, s.P, s.me.ivk, inputs.slice(0, Math.min(50, inputs.length)));
 
     const t0 = performance.now();
-    const hits = scanNotes(s.J, s.P, s.me.ivk, inputs, s.dk);
+    const hits = scanNotes(s.J, s.P, s.me.ivk, inputs);
     const totalMs = performance.now() - t0;
 
     const result: ScanResultMsg = {

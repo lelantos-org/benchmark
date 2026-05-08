@@ -2,10 +2,11 @@
     "name": "lelantos-bench",
     "private": true,
     "version": "0.0.0",
+    "type": "module",
     "description": "LAN Groth16 proof bench against vendored snarkjs.",
     "scripts": {
-        "prepare-input": "ts-node prepare.ts",
-        "serve": "ts-node server.ts",
+        "prepare-input": "node --import ./register.mjs prepare.ts",
+        "serve": "node --import ./register.mjs server.ts",
         "scan-bench-build": "esbuild src/scan-worker.ts --bundle --format=esm --target=es2022 --platform=browser --external:node:* --alias:circomlibjs=./src/circomlibjs-stub.js --outfile=public/bench.scan.worker.js && cp node_modules/@lelantos-org/sdk/wasm/jubjub/pkg/jubjub_wasm_bg.wasm public/jubjub_wasm_bg.wasm"
     },
     "devDependencies": {
@@ -15,6 +16,6 @@
         "typescript": "^5.5.3"
     },
     "dependencies": {
-        "@lelantos-org/sdk": "file:../sdk"
+        "@lelantos-org/sdk": "^0.3.1"
     }
 }

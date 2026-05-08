@@ -1,26 +1,32 @@
 // Build bench/public/input.json — canonical witness for the 2x2 deposit case.
-// Same logic as ../contracts/script/fixtures/gen_proof_deposit.ts up to
-// FS-derived z, but stops before snarkjs proving (browser does that part).
+// Mirrors contracts/script/fixtures/gen_proof_deposit.ts up to FS-derived z.
 
 import { writeFileSync, mkdirSync } from "fs";
 import { dirname, resolve } from "path";
+import { fileURLToPath } from "url";
 
 import {
     Poseidon,
     Jubjub,
     MerkleTree,
     derivePk,
+    BABYJUB_SUBGROUP_ORDER,
+    type Field,
+} from "@lelantos-org/sdk/crypto";
+import {
     toCircomInput,
     dummyInputAt,
     fmdFlag,
     fmdFlagKeyFromDetection,
     fmdGenDetectionKey,
     FMD_DEFAULT_GAMMA,
-    BABYJUB_SUBGROUP_ORDER,
+    flatten,
+    fiatShamirZ,
     type Note,
     type OutputClueWitness,
-} from "../circuits/src/test/helpers";
-import { flatten, fiatShamirZ } from "@lelantos-org/sdk";
+} from "@lelantos-org/sdk";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const DEPTH = 10;
 const ASSET = 1n;
@@ -32,23 +38,29 @@ const ALICE_NSK = 11n;
 
 const OUTPUT_PATH = resolve(__dirname, "public", "input.json");
 
-// Deterministic clue synth: bench timing doesn't care about clue contents,
-// only that the witness satisfies ClueCheck. Mirrors `makeClueGen` in
-// circuits/src/test/lib/transact.ts.
-function makeClueGen(P: Poseidon, J: Jubjub): () => OutputClueWitness {
-    const dk = fmdGenDetectionKey(() => 1n, FMD_DEFAULT_GAMMA);
-    const fk = fmdFlagKeyFromDetection(J, dk);
-    let counter = 0n;
-    return () => {
-        counter += 1n;
-        const r = (counter * 1234567n + 89n) % BABYJUB_SUBGROUP_ORDER;
-        const clue = fmdFlag(J, P, fk, r === 0n ? 1n : r);
-        let packed = 0n;
-        for (let i = 0; i < clue.bits.length; i++) {
-            packed |= BigInt(clue.bits[i]) << BigInt(8 * i);
-        }
-        return { r, fk: fk.X, clueBits: packed };
+interface ClueOut {
+    witness: OutputClueWitness;
+    Rpoint: [bigint, bigint];
+}
+
+function buildClue(P: Poseidon, J: Jubjub, seed: bigint, r: bigint): ClueOut {
+    let s = seed | 1n;
+    const stream = (): bigint => {
+        s = (s * 6364136223846793005n + 1442695040888963407n) & ((1n << 128n) - 1n);
+        return s | 1n;
     };
+    const dk = fmdGenDetectionKey(stream, FMD_DEFAULT_GAMMA);
+    const fk = fmdFlagKeyFromDetection(J, dk);
+    const rMod = r % BABYJUB_SUBGROUP_ORDER || 1n;
+    const clue = fmdFlag(J, P, fk, rMod);
+    const Rpoint = J.unpackPoint(clue.R);
+    if (!Rpoint) throw new Error("clue R unpack");
+    let bits = 0n;
+    for (let i = 0; i < FMD_DEFAULT_GAMMA; i++) {
+        const b = (clue.bits[i >> 3] >> (i & 7)) & 1;
+        if (b) bits |= 1n << BigInt(i);
+    }
+    return { witness: { r: rMod, fk: fk.X, clueBits: bits }, Rpoint };
 }
 
 async function main() {
@@ -56,29 +68,34 @@ async function main() {
     const J = await Jubjub.build();
 
     const tree = new MerkleTree(P, DEPTH);
-    const aliceP = derivePk(P, ALICE_NSK);
+    const aliceP: Field = derivePk(P, ALICE_NSK);
 
     const realOut: Note = { asset: ASSET, value: PUBLIC_IN, pk: aliceP, rho: 9n,  rcm: 10n, rcv: 11n };
     const padOut:  Note = { asset: ASSET, value: 0n,        pk: aliceP, rho: 12n, rcm: 13n, rcv: 14n };
 
-    const nextClue = makeClueGen(P, J);
-    const outputClues = [nextClue(), nextClue()];
+    const clue0 = buildClue(P, J, 0xa0n, 0x1234n);
+    const clue1 = buildClue(P, J, 0xa1n, 0x5678n);
 
     const baseInput = toCircomInput(P, J, {
-        publicAssetId:   ASSET,
-        publicAssetGen:  J.hashToAssetGen(ASSET),
-        publicIn:        PUBLIC_IN,
-        publicOut:       PUBLIC_OUT,
-        inputs:          [dummyInputAt(P, DEPTH, 0n), dummyInputAt(P, DEPTH, 1n)],
-        outputs:         [realOut, padOut],
-        outputClues,
-        merkleRoot:      tree.root(),
+        publicAssetId:    ASSET,
+        publicIn:         PUBLIC_IN,
+        publicOut:        PUBLIC_OUT,
+        inputs:           [dummyInputAt(P, DEPTH, 0n), dummyInputAt(P, DEPTH, 1n)],
+        outputs:          [realOut, padOut],
+        outputClues:      [clue0.witness, clue1.witness],
+        merkleRoot:       tree.root(),
         recipientAddress: RECIPIENT,
-        chainId:         CHAIN_ID,
-        z:               0n,
+        chainId:          CHAIN_ID,
+        z:                0n,
     });
 
-    const z = fiatShamirZ(flatten(baseInput as any));
+    const flattenInput = {
+        ...(baseInput as any),
+        out_clue_Rx:   [clue0.Rpoint[0], clue1.Rpoint[0]],
+        out_clue_Ry:   [clue0.Rpoint[1], clue1.Rpoint[1]],
+        out_clue_bits: [clue0.witness.clueBits, clue1.witness.clueBits],
+    };
+    const z = fiatShamirZ(flatten(flattenInput));
     const input = { ...baseInput, z: z.toString() };
 
     mkdirSync(dirname(OUTPUT_PATH), { recursive: true });

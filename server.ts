@@ -9,7 +9,10 @@ import {
 } from "fs";
 import { execSync } from "child_process";
 import { networkInterfaces } from "os";
-import { extname, join, normalize, resolve } from "path";
+import { extname, join, normalize, resolve, dirname } from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // ── paths & config ──────────────────────────────────────────────────────────
 const ROOT = resolve(__dirname, "..");
