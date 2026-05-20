@@ -23,7 +23,6 @@ import {
     flatten,
     fiatShamirZ,
     type Note,
-    type OutputClueWitness,
 } from "@lelantos-org/sdk";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -39,8 +38,7 @@ const ALICE_NSK = 11n;
 const OUTPUT_PATH = resolve(__dirname, "public", "input.json");
 
 interface ClueOut {
-    witness: OutputClueWitness;
-    Rpoint: [bigint, bigint];
+    witness: { clueBits: bigint; clueRx: bigint; clueRy: bigint };
 }
 
 function buildClue(P: Poseidon, J: Jubjub, seed: bigint, r: bigint): ClueOut {
@@ -60,7 +58,7 @@ function buildClue(P: Poseidon, J: Jubjub, seed: bigint, r: bigint): ClueOut {
         const b = (clue.bits[i >> 3] >> (i & 7)) & 1;
         if (b) bits |= 1n << BigInt(i);
     }
-    return { witness: { r: rMod, fk: fk.X, clueBits: bits }, Rpoint };
+    return { witness: { clueBits: bits, clueRx: Rpoint[0], clueRy: Rpoint[1] } };
 }
 
 async function main() {
@@ -70,8 +68,8 @@ async function main() {
     const tree = new MerkleTree(P, DEPTH);
     const aliceP: Field = derivePk(P, ALICE_NSK);
 
-    const realOut: Note = { asset: ASSET, value: PUBLIC_IN, pk: aliceP, rho: 9n,  rcm: 10n, rcv: 11n };
-    const padOut:  Note = { asset: ASSET, value: 0n,        pk: aliceP, rho: 12n, rcm: 13n, rcv: 14n };
+    const realOut: Note = { asset: ASSET, value: PUBLIC_IN, pk: aliceP, rho: 9n,  rcm: 10n, rcv: 11n, rcvDep: 15n };
+    const padOut:  Note = { asset: ASSET, value: 0n,        pk: aliceP, rho: 12n, rcm: 13n, rcv: 14n, rcvDep: 16n };
 
     const clue0 = buildClue(P, J, 0xa0n, 0x1234n);
     const clue1 = buildClue(P, J, 0xa1n, 0x5678n);
@@ -89,13 +87,7 @@ async function main() {
         z:                0n,
     });
 
-    const flattenInput = {
-        ...(baseInput as any),
-        out_clue_Rx:   [clue0.Rpoint[0], clue1.Rpoint[0]],
-        out_clue_Ry:   [clue0.Rpoint[1], clue1.Rpoint[1]],
-        out_clue_bits: [clue0.witness.clueBits, clue1.witness.clueBits],
-    };
-    const z = fiatShamirZ(flatten(flattenInput));
+    const z = fiatShamirZ(flatten(baseInput as any));
     const input = { ...baseInput, z: z.toString() };
 
     mkdirSync(dirname(OUTPUT_PATH), { recursive: true });

@@ -74,6 +74,7 @@ function buildNote(s: State, i: number, mine: boolean): ScanInput {
             value: BigInt(i + 1),
             rho: BigInt(i + 1000),
             rcm: BigInt(i + 2000),
+            rcvDep: BigInt(i + 3000),
         }),
     });
     // scanNotes -> stripClueBitsPrefix expects a 2B prefix even without FMD;

@@ -41,15 +41,6 @@ async function fetchJSON(url) {
     return r.json();
 }
 
-async function fetchBytes(url, label) {
-    const t = performance.now();
-    const r = await fetch(url);
-    if (!r.ok) throw new Error(`${url} fetch failed: ${r.status}`);
-    const buf = new Uint8Array(await r.arrayBuffer());
-    log(`${label} fetched: ${(buf.byteLength / 1e6).toFixed(1)} MB in ${(performance.now() - t).toFixed(0)} ms`);
-    return buf;
-}
-
 // ── results table ───────────────────────────────────────────────────────────
 async function refreshTable() {
     const rows = await fetchJSON("/results");
@@ -76,9 +67,9 @@ async function refreshTable() {
 
 // ── worker session (RPC over postMessage, sequential) ───────────────────────
 function makeSession() {
-    const w = new Worker("/bench.ark.worker.js", { type: "module" });
+    const w = new Worker("/bench.proof.worker.js", { type: "module" });
     const debugEvents = [];
-    let pending = null;       // { resolve, reject } for in-flight call
+    let pending = null;
     let chain = Promise.resolve();
 
     w.addEventListener("message", ({ data }) => {
@@ -98,14 +89,14 @@ function makeSession() {
         log(`  [worker:error-event] ${ev.message || ""}`);
     });
 
-    const send = (msg, transfer) => chain = chain.then(() => new Promise((resolve, reject) => {
+    const send = (msg) => chain = chain.then(() => new Promise((resolve, reject) => {
         pending = { resolve, reject };
-        w.postMessage(msg, transfer || []);
+        w.postMessage(msg);
     }));
 
     return {
-        prepare: (zkeyU8, wasmU8) =>
-            send({ type: "prepare", zkey: zkeyU8, wasm: wasmU8 }, [zkeyU8.buffer, wasmU8.buffer]),
+        prepare: (wasmPath, zkeyPath) =>
+            send({ type: "prepare", wasmPath, zkeyPath }),
         prove:   (input) => send({ type: "prove", input }),
         dispose: async () => { await send({ type: "dispose" }); w.terminate(); },
         debugEvents,
@@ -126,26 +117,20 @@ async function run() {
         const input = await fetchJSON("/input.json");
         log("input.json loaded");
 
-        setStatus("downloading zkey/wasm…");
-        const [zkeyU8, wasmU8] = await Promise.all([
-            fetchBytes("/2x2_final.zkey", "zkey"),
-            fetchBytes("/2x2.wasm", "wasm"),
-        ]);
-
         setStatus("preparing session…");
         const tPrep = performance.now();
         session = makeSession();
-        const prep = await session.prepare(zkeyU8, wasmU8);
+        const prep = await session.prepare("/2x2.wasm", "/2x2_final.zkey");
         log(`threads=${prep?.threads} isolated=${!!prep?.isolated}`);
         const prepareMs = performance.now() - tPrep;
-        log(`prepare: ${prepareMs.toFixed(0)} ms`);
+        log(`prepare: ${prepareMs.toFixed(0)} ms (includes wasm fetch + threadpool init)`);
 
         setStatus("warm-up…");
         const tWarm = performance.now();
         await session.prove(input);
         log(`warm-up prove: ${(performance.now() - tWarm).toFixed(0)} ms`);
 
-        const times = [], profiles = [], innerTimes = [];
+        const times = [], innerTimes = [];
         for (let i = 0; i < ITERS; i++) {
             setStatus(`iter ${i + 1}/${ITERS}…`);
             const t = performance.now();
@@ -153,9 +138,7 @@ async function run() {
             const dt = performance.now() - t;
             times.push(dt);
             if (typeof r?.ms === "number") innerTimes.push(r.ms);
-            if (r?.prof) profiles.push(r.prof);
             log(`iter ${i + 1}: ${dt.toFixed(0)} ms wall, ${r.ms.toFixed(0)} ms inner`);
-            if (r?.profLine) log("  " + r.profLine);
         }
 
         const workerDebug = [...session.debugEvents];
@@ -176,7 +159,6 @@ async function run() {
                 timesMs: times,
                 meanMs: s.mean, medianMs: s.median, minMs: s.min, maxMs: s.max,
                 prepareMs,
-                profiles,
                 innerTimesMs: innerTimes,
                 workerDebug,
             }),

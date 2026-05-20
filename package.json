@@ -5,17 +5,20 @@
     "type": "module",
     "description": "LAN Groth16 proof bench against vendored snarkjs.",
     "scripts": {
-        "prepare-input": "node --import ./register.mjs prepare.ts",
-        "serve": "node --import ./register.mjs server.ts",
-        "scan-bench-build": "esbuild src/scan-worker.ts --bundle --format=esm --target=es2022 --platform=browser --external:node:* --alias:circomlibjs=./src/circomlibjs-stub.js --outfile=public/bench.scan.worker.js && cp node_modules/@lelantos-org/sdk/wasm/jubjub/pkg/jubjub_wasm_bg.wasm public/jubjub_wasm_bg.wasm"
+        "prepare-input": "tsx prepare.ts",
+        "serve": "tsx server.ts",
+        "scan-bench-build": "esbuild src/scan-worker.ts --bundle --format=esm --target=es2022 --platform=browser --external:node:* --alias:circomlibjs=./src/circomlibjs-stub.js --outfile=public/bench.scan.worker.js && cp node_modules/@lelantos-org/sdk/wasm/jubjub/pkg/jubjub_wasm_bg.wasm public/jubjub_wasm_bg.wasm",
+        "proof-bench-build": "esbuild src/bench-proof.worker.ts --bundle --format=esm --target=es2022 --platform=browser --external:node:* --external:/wasm/prover/pkg/prover.js --outfile=public/bench.proof.worker.js && cp node_modules/@lelantos-org/sdk/dist/wasm/rayon-worker-bootstrap.mjs public/rayon-worker-bootstrap.mjs",
+        "bench-build": "npm run scan-bench-build && npm run proof-bench-build"
     },
     "devDependencies": {
         "@types/node": "^20.14.10",
         "esbuild": "^0.24.0",
-        "ts-node": "^10.9.2",
+        "tsx": "^4.22.3",
         "typescript": "^5.5.3"
     },
     "dependencies": {
-        "@lelantos-org/sdk": "^0.3.1"
+        "@lelantos-org/circuits": "^0.6.4",
+        "@lelantos-org/sdk": "^0.5.3"
     }
 }

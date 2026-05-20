@@ -15,17 +15,14 @@ import { fileURLToPath } from "url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // ── paths & config ──────────────────────────────────────────────────────────
-const ROOT = resolve(__dirname, "..");
 const PUBLIC = resolve(__dirname, "public");
-const PROVER_PKG = resolve(__dirname, "prover-pkg");
 const SDK_WASM = resolve(__dirname, "node_modules", "@lelantos-org", "sdk", "wasm");
 const RESULTS = resolve(__dirname, "results.json");
-const CIRCUITS = resolve(ROOT, "circuits", "build");
+const CIRCUITS_PKG = resolve(__dirname, "node_modules", "@lelantos-org", "circuits", "build");
 
 const CIRCUIT_FILES: Record<string, string> = {
-    "/2x2.wasm":              resolve(CIRCUITS, "2x2_js", "2x2.wasm"),
-    "/2x2_final.zkey":        resolve(CIRCUITS, "2x2_final.zkey"),
-    "/witness_calculator.js": resolve(CIRCUITS, "2x2_js", "witness_calculator.js"),
+    "/2x2.wasm":       resolve(CIRCUITS_PKG, "2x2.wasm"),
+    "/2x2_final.zkey": resolve(CIRCUITS_PKG, "2x2_final.zkey"),
 };
 
 const PORT = parseInt(process.env.PORT ?? "8787", 10);
@@ -165,18 +162,19 @@ function routeStaticGet(path: string, res: ServerResponse): boolean {
         streamFile(res, CIRCUIT_FILES[path]);
         return true;
     }
-    if (path === "/prover" || path === "/prover/") {
-        streamFile(res, join(PROVER_PKG, "prover.js"));
-        return true;
-    }
-    if (path.startsWith("/prover/")) {
-        const file = safeJoin(PROVER_PKG, path.slice("/prover/".length));
-        file ? streamFile(res, file) : send(res, 403, "forbidden");
-        return true;
-    }
     if (path.startsWith("/wasm/")) {
-        const file = safeJoin(SDK_WASM, path.slice("/wasm/".length));
-        file ? streamFile(res, file) : send(res, 403, "forbidden");
+        let file = safeJoin(SDK_WASM, path.slice("/wasm/".length));
+        if (!file) { send(res, 403, "forbidden"); return true; }
+        // wasm-bindgen rayon workers do `import('../../..')` which resolves to a
+        // directory URL. Resolve it via package.json#main so the browser gets a file.
+        if (existsSync(file) && statSync(file).isDirectory()) {
+            const pkgPath = join(file, "package.json");
+            if (existsSync(pkgPath)) {
+                const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));
+                file = join(file, (pkg.main as string) ?? "index.js");
+            }
+        }
+        streamFile(res, file);
         return true;
     }
     const file = safeJoin(PUBLIC, path === "/" ? "index.html" : path);
@@ -200,8 +198,12 @@ function warnMissingArtifacts() {
     for (const p of [...Object.values(CIRCUIT_FILES), join(PUBLIC, "input.json")]) {
         if (!existsSync(p)) console.warn(`WARN: missing ${p}`);
     }
-    if (!existsSync(PROVER_PKG)) {
-        console.warn(`WARN: missing ${PROVER_PKG} — run 'just prover-build' first`);
+    if (!existsSync(CIRCUITS_PKG)) {
+        console.warn(`WARN: missing @lelantos-org/circuits — run 'npm install' first`);
+    }
+    const proofWorker = join(PUBLIC, "bench.proof.worker.js");
+    if (!existsSync(proofWorker)) {
+        console.warn(`WARN: missing ${proofWorker} — run 'npm run proof-bench-build' first`);
     }
 }
 
