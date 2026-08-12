@@ -1,4 +1,4 @@
 .certs
 results.json
-prover-pkg/
 node_modules
+dist

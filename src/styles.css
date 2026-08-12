@@ -1,0 +1,429 @@
+/* Design tokens. Chart series and chrome come from the validated reference
+   palette: slot 1 blue / slot 2 orange, stepped per mode (worst adjacent CVD
+   ΔE 24.7 light, 26.8 dark). Dark is a selected set of steps, not a flip. */
+:root {
+    color-scheme: light dark;
+
+    --plane: #f9f9f7;
+    --surface: #fcfcfb;
+    --raised: #f2f1ed;
+
+    --ink: #0b0b0b;
+    --ink-2: #52514e;
+    --muted: #898781;
+
+    --grid: #e1e0d9;
+    --axis: #c3c2b7;
+    --border: rgba(11, 11, 11, 0.10);
+
+    --good: #0ca30c;
+    --critical: #d03b3b;
+
+    --series-1: #2a78d6;
+    --series-2: #eb6834;
+    /* Lighter step of the series-1 ramp — the progress track reads as the same
+       measure as its fill. */
+    --track: #cde2fb;
+
+    --accent: #1c5cab;
+    --accent-ink: #fff;
+    --accent-wash: rgba(42, 120, 214, 0.08);
+
+    --radius: 12px;
+    --radius-sm: 8px;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --plane: #0d0d0d;
+        --surface: #1a1a19;
+        --raised: #232322;
+
+        --ink: #fff;
+        --ink-2: #c3c2b7;
+        --muted: #898781;
+
+        --grid: #2c2c2a;
+        --axis: #383835;
+        --border: rgba(255, 255, 255, 0.10);
+
+        --series-1: #3987e5;
+        --series-2: #d95926;
+        --track: #184f95;
+
+        --accent: #3987e5;
+        --accent-ink: #0d0d0d;
+        --accent-wash: rgba(57, 135, 229, 0.14);
+    }
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    background: var(--plane);
+    color: var(--ink);
+    font: 14px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-text-size-adjust: 100%;
+}
+
+code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: .92em;
+    color: var(--ink-2);
+}
+
+.page {
+    max-width: 940px;
+    margin: 0 auto;
+    padding: 2rem 1rem 4rem;
+}
+
+/* ── masthead ─────────────────────────────────────────────────────────────── */
+.masthead { margin-bottom: 1.5rem; }
+
+h1 {
+    font-size: 1.35rem;
+    letter-spacing: -0.01em;
+    margin: 0 0 .6rem;
+}
+
+.badges { display: flex; flex-wrap: wrap; gap: .4rem; }
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    padding: .2rem .55rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--ink-2);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+/* Tone rides a dot; the text always says what the state is. */
+.badge .dot { width: 7px; height: 7px; border-radius: 50%; }
+.badge-good .dot { background: var(--good); }
+.badge-bad .dot { background: var(--critical); }
+
+.warn {
+    margin: .75rem 0 0;
+    padding: .6rem .75rem;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--critical);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--ink-2);
+    font-size: 13px;
+}
+
+/* ── panels ───────────────────────────────────────────────────────────────── */
+.panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    margin-bottom: 1.25rem;
+}
+
+.panel-head { margin-bottom: 1rem; }
+h2 { font-size: 1.05rem; margin: 0 0 .2rem; }
+h3 { font-size: .95rem; margin: 0; }
+.sub { margin: 0; color: var(--muted); font-size: 13px; }
+.muted { color: var(--muted); font-weight: 400; }
+
+.controls {
+    display: flex;
+    gap: .75rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+button {
+    font: inherit;
+    padding: .55rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--raised);
+    color: var(--ink);
+    cursor: pointer;
+    /* Comfortable tap target: the point of this bench is running it on phones. */
+    min-height: 44px;
+}
+
+button.primary {
+    background: var(--accent);
+    border-color: transparent;
+    color: var(--accent-ink);
+    font-weight: 600;
+}
+
+button:disabled { opacity: .5; cursor: default; }
+button:focus-visible, [tabindex]:focus-visible, input:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.choices { display: flex; gap: .4rem; }
+
+.choice {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .35rem .6rem;
+    min-height: 44px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--raised);
+    color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+}
+
+.field { display: inline-flex; align-items: center; gap: .45rem; color: var(--muted); }
+
+input {
+    font: inherit;
+    padding: .35rem .5rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--plane);
+    color: var(--ink);
+    min-height: 36px;
+}
+
+input[type="checkbox"] { min-height: 0; accent-color: var(--accent); }
+.num { width: 4.5em; font-variant-numeric: tabular-nums; }
+.num-wide { width: 6em; }
+
+.status { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.status.ok { color: var(--ink-2); }
+.status.err { color: var(--critical); }
+
+/* ── progress ─────────────────────────────────────────────────────────────── */
+.progress {
+    height: 6px;
+    margin-top: .9rem;
+    border-radius: 999px;
+    background: var(--track);
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--series-1);
+    border-radius: 999px;
+    transition: width .2s ease-out;
+}
+
+/* ── stat tiles ───────────────────────────────────────────────────────────── */
+.summary { margin-top: 1.1rem; }
+.summary-head { margin-bottom: .5rem; font-size: .9rem; }
+
+.tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+    gap: .5rem;
+    margin: 0;
+}
+
+.tile {
+    padding: .55rem .7rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--plane);
+}
+
+.tile dt { color: var(--muted); font-size: 12px; }
+
+.tile dd {
+    margin: .1rem 0 0;
+    font-size: 1.35rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    /* Proportional figures: tabular-nums makes a big number look loose. */
+}
+
+.tile .unit { margin-left: .2rem; font-size: .62em; font-weight: 400; color: var(--muted); }
+
+/* ── log ──────────────────────────────────────────────────────────────────── */
+.log-panel {
+    margin-top: 1.1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--plane);
+}
+
+.log-panel > summary {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .5rem .7rem;
+    cursor: pointer;
+    color: var(--ink-2);
+    font-size: 13px;
+    list-style-position: inside;
+}
+
+.log-panel .count { color: var(--muted); }
+.log-actions { margin-left: auto; display: flex; gap: .3rem; }
+
+button.ghost {
+    min-height: 28px;
+    padding: .15rem .5rem;
+    font-size: 12px;
+    background: transparent;
+    color: var(--muted);
+}
+
+button.ghost:hover:not(:disabled) { color: var(--ink); background: var(--raised); }
+
+.log {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    padding: .6rem .7rem;
+    border-top: 1px solid var(--border);
+    max-height: 20em;
+    overflow-y: auto;
+    color: var(--ink-2);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+}
+
+/* ── chart ────────────────────────────────────────────────────────────────── */
+.chart { margin: 1.5rem 0 0; }
+.chart figcaption { margin-bottom: .5rem; }
+
+.legend {
+    display: flex;
+    gap: .9rem;
+    margin: 0 0 .3rem;
+    padding: 0;
+    list-style: none;
+    color: var(--ink-2);
+    font-size: 12px;
+}
+
+.legend li { display: inline-flex; align-items: center; gap: .35rem; }
+.legend .swatch { width: 10px; height: 10px; border-radius: 2px; }
+.swatch.series-1, .stroke.series-1 { background: var(--series-1); }
+.swatch.series-2, .stroke.series-2 { background: var(--series-2); }
+
+.chart-plot { position: relative; }
+.chart svg { display: block; overflow: visible; }
+
+.chart .grid { stroke: var(--grid); stroke-width: 1; }
+.chart .axis { stroke: var(--axis); stroke-width: 1; }
+.chart .tick { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.chart .axis-unit { text-anchor: end; }
+.chart .device { fill: var(--ink-2); font-size: 12px; }
+.chart .device.self { fill: var(--ink); font-weight: 600; }
+.chart .device-sub { fill: var(--muted); font-size: 10px; }
+.chart .value { fill: var(--ink-2); font-size: 11px; font-variant-numeric: tabular-nums; }
+.chart path.series-1 { fill: var(--series-1); }
+.chart path.series-2 { fill: var(--series-2); }
+.chart .hit { fill: transparent; }
+
+.bar-group { outline: none; }
+.bar-group:hover path, .bar-group:focus-visible path { filter: brightness(1.12); }
+.bar-group:focus-visible path { stroke: var(--ink); stroke-width: 1.5; }
+
+.tooltip {
+    position: absolute;
+    transform: translate(-50%, calc(-100% - 10px));
+    display: grid;
+    gap: .1rem;
+    padding: .45rem .6rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, .18);
+    pointer-events: none;
+    white-space: nowrap;
+    font-size: 12px;
+    z-index: 2;
+}
+
+/* Value leads, label follows. */
+.tooltip strong { font-size: 15px; font-weight: 600; }
+.tooltip-key { display: inline-flex; align-items: center; gap: .35rem; color: var(--ink-2); }
+.tooltip .stroke { width: 12px; height: 2px; border-radius: 1px; }
+.tooltip-meta { color: var(--muted); }
+
+.note { margin: .5rem 0 0; color: var(--muted); font-size: 12px; }
+
+/* ── results table ────────────────────────────────────────────────────────── */
+/* Capped rather than unbounded: rows accumulate for as long as the LAN keeps
+   running the bench, and the sticky header only works inside a scroll box. */
+.table-scroll { overflow: auto; max-height: 26em; margin-top: 1.25rem; }
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+}
+
+thead th {
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+    color: var(--muted);
+    font-weight: 500;
+    text-align: right;
+    white-space: nowrap;
+    padding: .4rem .6rem;
+    border-bottom: 1px solid var(--axis);
+}
+
+tbody th, tbody td {
+    padding: .4rem .6rem;
+    text-align: right;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--grid);
+}
+
+tbody th {
+    text-align: left;
+    font-weight: 500;
+    max-width: 16em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+thead th:first-child { text-align: left; }
+tbody td.lead { color: var(--ink); font-weight: 600; }
+tbody tr.self { background: var(--accent-wash); }
+tbody tr:hover { background: var(--raised); }
+
+.empty { color: var(--muted); margin-top: 1.25rem; }
+
+.sr-only {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+@media (max-width: 540px) {
+    .page { padding: 1.25rem .75rem 3rem; }
+    .panel { padding: 1rem .85rem; }
+    .controls { gap: .5rem; }
+    button.primary { flex: 1 1 100%; }
+
+    /* Phone columns: identity and the headline numbers. iters is constant, and
+       min/max/when are detail the chart and the desktop view already carry —
+       better dropped than sliced in half by the panel edge. */
+    thead th:nth-child(4), tbody td:nth-child(4),
+    thead th:nth-child(7), tbody td:nth-child(7),
+    thead th:nth-child(8), tbody td:nth-child(8),
+    thead th:nth-child(9), tbody td:nth-child(9) { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+}

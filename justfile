@@ -1,6 +1,5 @@
 set shell := ["bash", "-ceuo", "pipefail"]
 
-ROOT := justfile_directory() / ".."
 BENCH := justfile_directory()
 
 default:
@@ -10,25 +9,23 @@ default:
 install:
     cd "{{BENCH}}" && [ -d node_modules ] || npm install --no-audit --no-fund
 
-# Build canonical witness for the LAN benchmark UI (bench/public/input.json).
+# Build the canonical witnesses (public/input.2x2.json, public/input.3x3.json).
 prepare: install
     cd "{{BENCH}}" && npm run prepare-input
 
-# Build the proof bench worker (esbuild bundles SDK WasmProver).
-# Re-run after editing bench/src/bench-proof.worker.ts.
-proof-build: install
-    cd "{{BENCH}}" && npm run proof-bench-build
+# Run the LAN bench on :8787 (override with PORT=). HTTPS by default:
+# SharedArrayBuffer needs a secure context, so phones need TLS.
+serve PORT="8787": install prepare
+    cd "{{BENCH}}" && PORT={{PORT}} npm run dev
 
-# Build the wallet-scan bench worker (esbuild bundles SDK + WasmJubjub).
-# Re-run after editing bench/src/scan-worker.ts.
-scan-build: install
-    cd "{{BENCH}}" && npm run scan-bench-build
+# Production build, then serve it the same way `serve` does.
+preview PORT="8787": install prepare
+    cd "{{BENCH}}" && npm run build && PORT={{PORT}} npm run preview
 
-# Build both bench workers.
-bench-build: install
-    cd "{{BENCH}}" && npm run bench-build
+# Typecheck (app + Node-side) and lint.
+check: install
+    cd "{{BENCH}}" && npm run check
 
-# Run LAN benchmark webserver on :8787 (override with PORT=).
-# HTTPS-only (self-signed cert auto-generated): SharedArrayBuffer requires secure context.
-serve PORT="8787": install
-    cd "{{BENCH}}" && HTTPS=1 PORT={{PORT}} npm run serve
+# Lint only.
+lint: install
+    cd "{{BENCH}}" && npm run lint
