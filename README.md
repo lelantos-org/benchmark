@@ -67,30 +67,67 @@ Two panels, each with a run button:
 
 ## Reference results
 
-Recorded 2026-08-12 against SDK 0.8.1 and circuits 0.8.0, over HTTPS on a LAN.
-Each row is one run: 5 timed iterations, warm-up excluded.
+Recorded 2026-08-13 against SDK 0.9.0 and circuits 0.8.0, over HTTPS on a LAN.
+Each row is one run: 5 timed iterations, warm-up excluded. *Artifacts* is the
+`cachedArtifacts` flag — whether the SDK's Cache API already held the zkey.
 
-| Device | Shape | Mean | Median | Min | Max | Prepare |
-|---|---|---|---|---|---|---|
-| macOS · Chrome 150 · 16 cores | 2x2 | **750 ms** | 748 | 746 | 757 | 275 ms |
-| macOS · Chrome 150 · 16 cores | 3x3 | **932 ms** | 933 | 925 | 941 | 296 ms |
-| iPhone · iOS 18.5 Safari · 4 cores | 2x2 | **5,902 ms** | 5,951 | 5,679 | 6,092 | 11,494 ms |
-| iPhone · iOS 18.5 Safari · 4 cores | 3x3 | **7,411 ms** | 7,492 | 7,183 | 7,573 | 10,550 ms |
+| Device | Shape | Artifacts | Mean | Median | Min | Max | Prepare |
+|---|---|---|---|---|---|---|---|
+| macOS · Chrome 150 · 16 cores | 2x2 | cold | **760 ms** | 761 | 751 | 769 | 317 ms |
+| macOS · Chrome 150 · 16 cores | 3x3 | cold | **914 ms** | 909 | 903 | 931 | 295 ms |
+| macOS · Chrome 150 · 16 cores | 2x2 | warm | **755 ms** | 751 | 747 | 771 | 258 ms |
+| macOS · Chrome 150 · 16 cores | 3x3 | warm | **913 ms** | 913 | 909 | 919 | 198 ms |
+| iPhone · iOS 18.5 Safari · 4 cores | 2x2 | cold | **2,773 ms** | 2,796 | 2,642 | 2,854 | 2,743 ms |
+| iPhone · iOS 18.5 Safari · 4 cores | 3x3 | cold | **3,747 ms** | 3,751 | 3,689 | 3,787 | 2,504 ms |
 
-- The iPhone proves ~7.9× (2x2) and ~8.0× (3x3) slower than the Mac, on 4
+- The iPhone proves ~3.6× (2x2) and ~4.1× (3x3) slower than the Mac, on 4
   reported hardware threads against 16.
-- Going from 2x2 to 3x3 costs ~24% on the Mac and ~26% on the iPhone.
-- Prepare covers worker spawn, artifact load and thread-pool init. The
-  iPhone's ~11 s is dominated by the first LAN download of the zkey; artifacts
-  are served `immutable`, so later runs on that device skip it. These rows
-  predate SDK 0.9.0 and are all cold.
+- Going from 2x2 to 3x3 costs ~20% on the Mac and ~35% on the iPhone.
+- Prepare covers worker spawn, artifact load and thread-pool init. Warming the
+  artifact cache takes it from 317→258 ms (2x2) and 295→198 ms (3x3) on the Mac.
 - From SDK 0.9.0 the prover persists artifacts to the Cache API, which is
-  origin-scoped and therefore shared by the page and the prover worker. Prepare
-  is a cold download only until a device has run the shape once; rows record
-  which state they measured in `cachedArtifacts`, the summary tile reads
+  origin-scoped and therefore shared by the page and the prover worker. Rows
+  record which state they measured in `cachedArtifacts`, the summary tile reads
   *prepare (cold)* or *prepare (warm)*, and **Clear artifact cache** in the
   proof panel puts the device back to cold. Only compare prepare across rows in
   the same state.
-- Run-to-run spread is low single digits: a repeat 3x3 run on the same Mac
-  measured 916 ms (−1.7%). An earlier session on that machine under Chrome 141,
-  which reported 15 cores, gave 700 ms (2x2) and 873 ms (3x3).
+
+### What changed since the 0.8.1 rows
+
+The previous table (2026-08-12, SDK 0.8.1) recorded the iPhone at 5,902 ms
+(2x2) / 7,411 ms (3x3) with an ~11 s prepare. Both figures roughly halved
+without the prover itself changing, and **the artifact cache does not explain
+it** — both iPhone rows above are `cachedArtifacts: false`, and in any case
+artifact caching only moves *prepare*, never the timed prove loop.
+
+Two things are unaccounted for and worth pinning down before either table is
+cited as a baseline:
+
+- **Prepare 11.5 s → 2.7 s on a cold run.** Most likely the browser's own HTTP
+  disk cache: artifacts are served `immutable`, so a device that has fetched
+  them before skips the transfer even when the SDK-level cache is cold. That
+  makes "cold" mean two different things depending on visit history.
+- **The prove loop halving.** No SDK change between the two dates touches
+  steady-state proving. Thermal state, low-power mode, or background load on
+  the earlier run are the plausible candidates. Untested.
+
+Re-run both devices from a cleared HTTP cache before treating either set as
+authoritative.
+
+### Where prove time goes
+
+Measured in-process on a 16-core Mac (Node, not the browser), warm — the split
+is logged at `debug` on `lelantos:prover:wasm` and printed by the SDK's
+`npm run test:bench`:
+
+| Shape | Witness | Groth16 | Total |
+|---|---|---|---|
+| 2x2 | 177 ms | 560 ms | ~740 ms |
+| 3x3 | 259 ms | 665 ms | ~925 ms |
+
+Witness generation is single-threaded and does not respond to thread count.
+Groth16 is the parallel part — 3x3 on the same machine: 1,288 ms at 4 threads,
+774 ms at 8, 665 ms at 16.
+
+- Run-to-run spread is low single digits. An earlier session on that Mac under
+  Chrome 141, which reported 15 cores, gave 700 ms (2x2) and 873 ms (3x3).
