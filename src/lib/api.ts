@@ -27,6 +27,12 @@ export interface BenchResult extends DeviceInfo {
     prepareMs: number;
     /** Uncounted first prove. Absent on rows written before it was recorded. */
     warmupMs?: number;
+    /**
+     * Whether the SDK's artifact cache already held this shape when `prepareMs`
+     * started — a warm row's prepare skips the zkey download. Absent on rows
+     * written before SDK 0.9.0 made that cache the default; those are cold.
+     */
+    cachedArtifacts?: boolean;
     /** Records forwarded by the SDK worker during the run. */
     sdkLogs: string[];
 }

@@ -80,9 +80,17 @@ Each row is one run: 5 timed iterations, warm-up excluded.
 - The iPhone proves ~7.9× (2x2) and ~8.0× (3x3) slower than the Mac, on 4
   reported hardware threads against 16.
 - Going from 2x2 to 3x3 costs ~24% on the Mac and ~26% on the iPhone.
-- Prepare covers worker spawn, artifact fetch and thread-pool init. The
+- Prepare covers worker spawn, artifact load and thread-pool init. The
   iPhone's ~11 s is dominated by the first LAN download of the zkey; artifacts
-  are served `immutable`, so later runs on that device skip it.
+  are served `immutable`, so later runs on that device skip it. These rows
+  predate SDK 0.9.0 and are all cold.
+- From SDK 0.9.0 the prover persists artifacts to the Cache API, which is
+  origin-scoped and therefore shared by the page and the prover worker. Prepare
+  is a cold download only until a device has run the shape once; rows record
+  which state they measured in `cachedArtifacts`, the summary tile reads
+  *prepare (cold)* or *prepare (warm)*, and **Clear artifact cache** in the
+  proof panel puts the device back to cold. Only compare prepare across rows in
+  the same state.
 - Run-to-run spread is low single digits: a repeat 3x3 run on the same Mac
   measured 916 ms (−1.7%). An earlier session on that machine under Chrome 141,
   which reported 15 cores, gave 700 ms (2x2) and 873 ms (3x3).

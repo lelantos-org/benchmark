@@ -20,13 +20,28 @@ export const SHAPES = ["2x2", "3x3"] as const;
 export type Shape = (typeof SHAPES)[number];
 
 export interface CircuitArtifacts {
+    /** Absolute — see {@link artifactsFor}. */
     wasmPath: string;
+    /** Absolute — see {@link artifactsFor}. */
     zkeyPath: string;
     witnessUrl: string;
 }
 
+/**
+ * Prover artifacts are named absolutely on purpose: the SDK's persistent cache
+ * (0.9.0+) keys on the URL and the Cache API stores `Request`s, which must be
+ * http(s), so the SDK skips persistence for anything that fails its
+ * `^https?://` test. A root-relative `/3x3_final.zkey` loads fine and silently
+ * re-downloads on every reload and every worker spawn.
+ *
+ * The origin is part of the key, so serving the same bench over `localhost` and
+ * over a LAN address caches the ~85 MB once per origin.
+ *
+ * `witnessUrl` stays relative: it is a small JSON fetched by the page, not an
+ * artifact the SDK loads.
+ */
 export const artifactsFor = (shape: Shape): CircuitArtifacts => ({
-    wasmPath: `/${shape}.wasm`,
-    zkeyPath: `/${shape}_final.zkey`,
+    wasmPath: new URL(`/${shape}.wasm`, location.href).href,
+    zkeyPath: new URL(`/${shape}_final.zkey`, location.href).href,
     witnessUrl: `/input.${shape}.json`,
 });

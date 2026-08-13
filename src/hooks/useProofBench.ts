@@ -14,6 +14,8 @@ import type { LogHandle } from "./useLog";
 export interface ShapeSummary extends Stats {
     shape: Shape;
     prepareMs: number;
+    /** Qualifies `prepareMs`: a warm prepare skipped the artifact download. */
+    cachedArtifacts: boolean;
 }
 
 export interface ProofBench {
@@ -73,7 +75,12 @@ export function useProofBench(): ProofBench {
             });
             const s = stats(measured.timesMs);
             log(`${shape}: mean=${s.mean.toFixed(0)} median=${s.median.toFixed(0)} min=${s.min.toFixed(0)} max=${s.max.toFixed(0)}`);
-            setSummary(prev => [...prev, { shape, prepareMs: measured.prepareMs, ...s }]);
+            setSummary(prev => [...prev, {
+                shape,
+                prepareMs: measured.prepareMs,
+                cachedArtifacts: measured.cachedArtifacts,
+                ...s,
+            }]);
             setProgress((i + 1) / shapes.length);
 
             await postResult(toResultRow(dev, shape, measured));

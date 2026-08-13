@@ -3,6 +3,7 @@
 // timed path can be exercised without a component tree.
 
 import { type BenchResult, fetchWitness } from "./api";
+import { artifactsCached } from "./artifact-cache";
 import type { DeviceInfo } from "./device";
 import { createProver } from "./prover";
 import { artifactsFor, type Shape } from "./sdk-wasm";
@@ -13,12 +14,22 @@ import { stats } from "./stats";
 export const ITERS = 5;
 
 export interface ShapeMeasurement {
-    /** Worker spawn + artifact fetch + rayon pool bring-up. */
+    /**
+     * Worker spawn + artifact load + rayon pool bring-up.
+     *
+     * From SDK 0.9.0 the artifact load is a Cache API read once this origin has
+     * fetched the shape, so the first run on a device measures a cold download
+     * and every later one does not. Compare `prepare` across devices only for
+     * runs in the same state — clear site data (or the SDK's
+     * `clearArtifactCache()`) to force a cold one.
+     */
     prepareMs: number;
     /** First prove, excluded from `timesMs` — pays JIT and lazy-init costs. */
     warmupMs: number;
     /** The `ITERS` timed proves. */
     timesMs: number[];
+    /** Whether the artifacts were already cached when `prepareMs` started. */
+    cachedArtifacts: boolean;
     /** SDK records emitted while this shape ran. */
     sdkLogs: string[];
 }
@@ -72,6 +83,7 @@ export function toResultRow(device: DeviceInfo, shape: Shape, run: ShapeMeasurem
         maxMs: summary.max,
         prepareMs: run.prepareMs,
         warmupMs: run.warmupMs,
+        cachedArtifacts: run.cachedArtifacts,
         sdkLogs: run.sdkLogs,
     };
 }
@@ -88,14 +100,17 @@ export async function measureShape(shape: Shape, report: ShapeReporter): Promise
         const input = await fetchWitness(artifactsFor(shape).witnessUrl);
         report.log(`input.${shape}.json loaded`);
 
-        // preload() is the SDK's own warm-up entry point: spawn worker, fetch
-        // wasm + zkey, bring up the rayon pool.
+        // preload() is the SDK's own warm-up entry point: spawn worker, load
+        // wasm + zkey (network or Cache API), bring up the rayon pool.
         report.progress({ shape, phase: "prepare", iter: 0 });
+        // Probed before preload, which is what fills the cache.
+        const warm = await artifactsCached(shape);
+        report.log(`artifacts: ${warm ? "cached (warm prepare)" : "not cached (cold prepare)"}`);
         const tPrepare = performance.now();
         prover = createProver(shape);
         await prover.preload();
         const prepareMs = performance.now() - tPrepare;
-        report.log(`prepare: ${prepareMs.toFixed(0)} ms (artifact fetch + threadpool init)`);
+        report.log(`prepare: ${prepareMs.toFixed(0)} ms (artifact load + threadpool init)`);
 
         report.progress({ shape, phase: "warmup", iter: 0 });
         const tWarmup = performance.now();
@@ -113,7 +128,7 @@ export async function measureShape(shape: Shape, report: ShapeReporter): Promise
             report.log(`iter ${i + 1}: ${dt.toFixed(0)} ms`);
         }
 
-        return { prepareMs, warmupMs, timesMs, sdkLogs: capture.lines };
+        return { prepareMs, warmupMs, timesMs, cachedArtifacts: warm, sdkLogs: capture.lines };
     } finally {
         prover?.dispose();
         capture.stop();

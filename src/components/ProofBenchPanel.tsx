@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { useProofBench, type ShapeSummary } from "../hooks/useProofBench";
+import { clearArtifactCache } from "../lib/artifact-cache";
 import { formatMsInt } from "../lib/format";
 import { SHAPES, type Shape } from "../lib/sdk-wasm";
 import { DeviceChart } from "./DeviceChart";
@@ -13,7 +14,22 @@ import { StatusPill } from "./StatusPill";
 export function ProofBenchPanel({ selfUa }: { selfUa: string }) {
     const { state, status, progress, summary, results, logHandle, run } = useProofBench();
     const [selected, setSelected] = useState<Shape[]>([...SHAPES]);
+    const [clearing, setClearing] = useState(false);
     const busy = state === "running";
+
+    // The SDK persists artifacts by default, so every run after the first on a
+    // device measures a warm prepare. This is the way back to a cold one.
+    const clearCache = async () => {
+        setClearing(true);
+        try {
+            const dropped = await clearArtifactCache();
+            logHandle.log(dropped
+                ? "artifact cache cleared — next run measures a cold prepare"
+                : "artifact cache: nothing to clear");
+        } finally {
+            setClearing(false);
+        }
+    };
 
     // Rebuilt from SHAPES rather than spliced, so selection order always matches
     // the checkbox order regardless of which box was clicked first.
@@ -41,6 +57,9 @@ export function ProofBenchPanel({ selfUa }: { selfUa: string }) {
                         </label>
                     ))}
                 </div>
+                <button className="ghost" onClick={() => void clearCache()} disabled={busy || clearing}>
+                    {clearing ? "Clearing…" : "Clear artifact cache"}
+                </button>
                 <StatusPill state={state} status={status} />
             </div>
 
@@ -66,6 +85,6 @@ function shapeTiles(run: ShapeSummary): Stat[] {
         { label: "median", value: formatMsInt(run.median), unit: "ms" },
         { label: "min", value: formatMsInt(run.min), unit: "ms" },
         { label: "max", value: formatMsInt(run.max), unit: "ms" },
-        { label: "prepare", value: formatMsInt(run.prepareMs), unit: "ms" },
+        { label: run.cachedArtifacts ? "prepare (warm)" : "prepare (cold)", value: formatMsInt(run.prepareMs), unit: "ms" },
     ];
 }
