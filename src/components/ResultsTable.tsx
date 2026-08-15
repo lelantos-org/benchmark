@@ -4,7 +4,23 @@ import { browserLabel, deviceLabel } from "../lib/results";
 
 // Milliseconds in every timing column: a table is read down, not across, so one
 // unit per column beats switching to seconds on the larger rows.
-const COLUMNS = ["device", "shape", "cores", "iters", "mean (ms)", "median (ms)", "min (ms)", "max (ms)", "when"] as const;
+//
+// `detail` marks the columns the narrow layout drops. It travels as a class on
+// both the header and its cells, so reordering this list cannot desynchronise
+// from the stylesheet the way positional `nth-child` rules did.
+const COLUMNS = [
+    { label: "device" },
+    { label: "shape" },
+    { label: "cores" },
+    { label: "iters", detail: true },
+    { label: "mean (ms)" },
+    { label: "median (ms)" },
+    { label: "min (ms)", detail: true },
+    { label: "max (ms)", detail: true },
+    { label: "when", detail: true },
+] as const;
+
+const DETAIL = "col-detail";
 
 /** Table view of every recorded run — the chart's WCAG-clean twin. */
 export function ResultsTable({ rows, selfUa }: { rows: BenchResult[]; selfUa: string }) {
@@ -17,7 +33,13 @@ export function ResultsTable({ rows, selfUa }: { rows: BenchResult[]; selfUa: st
             <table>
                 <caption className="sr-only">Recorded proof runs, newest first. Times in milliseconds.</caption>
                 <thead>
-                    <tr>{COLUMNS.map(c => <th key={c} scope="col">{c}</th>)}</tr>
+                    <tr>
+                        {COLUMNS.map(c => (
+                            <th key={c.label} scope="col" className={"detail" in c ? DETAIL : undefined}>
+                                {c.label}
+                            </th>
+                        ))}
+                    </tr>
                 </thead>
                 <tbody>
                     {rows.slice().reverse().map((row, i) => (
@@ -28,12 +50,12 @@ export function ResultsTable({ rows, selfUa }: { rows: BenchResult[]; selfUa: st
                             </th>
                             <td>{row.shape ?? "2x2"}</td>
                             <td>{row.cores || ""}</td>
-                            <td>{row.iters || ""}</td>
+                            <td className={DETAIL}>{row.iters || ""}</td>
                             <td className="lead">{formatMsInt(row.meanMs)}</td>
                             <td>{formatMsInt(row.medianMs)}</td>
-                            <td>{formatMsInt(row.minMs)}</td>
-                            <td>{formatMsInt(row.maxMs)}</td>
-                            <td className="muted">{formatWhen(row.ts)}</td>
+                            <td className={DETAIL}>{formatMsInt(row.minMs)}</td>
+                            <td className={DETAIL}>{formatMsInt(row.maxMs)}</td>
+                            <td className={`muted ${DETAIL}`}>{formatWhen(row.ts)}</td>
                         </tr>
                     ))}
                 </tbody>

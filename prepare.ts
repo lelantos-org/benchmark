@@ -25,9 +25,9 @@ import {
     flatten,
     fiatShamirZ,
 } from "@lelantos-org/sdk/circuit";
+import { fmdClueKeyFromRoot, fmdExpandFlagKey } from "@lelantos-org/sdk/fmd";
 import {
     buildOutputAux,
-    flagKeyFromAddressDk,
     type Note,
     type OutputAux,
 } from "@lelantos-org/sdk/notes";
@@ -88,7 +88,13 @@ function buildWitness(P: Poseidon, J: Jubjub, shape: Shape): Record<string, unkn
 
     // Encrypted-note payloads: the clue witnesses are SNARK-bound and the aux
     // digest binds ephPub + ciphertext alongside them.
-    const { flag: aliceFlagKey } = flagKeyFromAddressDk(J, ALICE_DK_SEED);
+    //
+    // The recipient's flag key is the sender's view of their address, built in
+    // two steps: `ck = B · dk_root` is the clue key an address publishes, and
+    // expanding it gives the γ points `X_i = ck + B·h_i`. Only the first step
+    // touches the secret, which is why a sender can do the second from a
+    // published address alone.
+    const aliceFlagKey = fmdExpandFlagKey(J, P, fmdClueKeyFromRoot(J, ALICE_DK_SEED));
     const alicePkD = J.mulPointEscalar(J.base8, ALICE_IVK);
     const aux = outputs.map((note, j) => buildOutputAux({
         J,

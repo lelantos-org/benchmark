@@ -2,8 +2,14 @@
 // encrypted to our ivk, the rest to a stranger's, so trial-decrypt does the
 // same mix of hits and misses a real wallet sync sees.
 
-import { BABYJUB_SUBGROUP_ORDER, configureJubjubWasm, type Field, Jubjub, type Point, encryptNote } from "@lelantos-org/sdk";
-import { encodeNotePayload, withClueBitsPrefix } from "@lelantos-org/sdk/notes";
+import {
+    BABYJUB_SUBGROUP_ORDER,
+    configureJubjubWasm,
+    type Field,
+    Jubjub,
+    type Point,
+} from "@lelantos-org/sdk/crypto";
+import { encodeNotePayload, encryptNote, withClueBitsPrefix } from "@lelantos-org/sdk/notes";
 import { encodeInput, type ScanInput, type WireScanInput } from "@lelantos-org/sdk/sync";
 
 import { errMsg } from "../lib/errors";
@@ -68,6 +74,9 @@ function buildNote(J: Jubjub, id: Identity, i: number): ScanInput {
         epk: enc.epk,
         cm: n,
         leafIndex: i,
+        // Stored on the hit as `firstSeenBlock`. Synthetic feed, so one
+        // notional block per note keeps it monotonic like a real chain.
+        blockNumber: i,
     };
 }
 

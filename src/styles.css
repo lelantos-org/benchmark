@@ -29,8 +29,16 @@
     --accent-ink: #fff;
     --accent-wash: rgba(42, 120, 214, 0.08);
 
+    --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
     --radius: 12px;
     --radius-sm: 8px;
+    --radius-xs: 6px;
+    --radius-pill: 999px;
+
+    /* Comfortable tap target: the point of this bench is running it on phones. */
+    --tap: 44px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -57,18 +65,19 @@
     }
 }
 
-* { box-sizing: border-box; }
+/* ── base ─────────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
 
 body {
     margin: 0;
     background: var(--plane);
     color: var(--ink);
-    font: 14px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+    font: 14px/1.55 var(--font-sans);
     -webkit-text-size-adjust: 100%;
 }
 
 code {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: var(--font-mono);
     font-size: .92em;
     color: var(--ink-2);
 }
@@ -96,7 +105,7 @@ h1 {
     gap: .4rem;
     padding: .2rem .55rem;
     border: 1px solid var(--border);
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     background: var(--surface);
     color: var(--ink-2);
     font-size: 12px;
@@ -134,6 +143,7 @@ h3 { font-size: .95rem; margin: 0; }
 .sub { margin: 0; color: var(--muted); font-size: 13px; }
 .muted { color: var(--muted); font-weight: 400; }
 
+/* ── controls ─────────────────────────────────────────────────────────────── */
 .controls {
     display: flex;
     gap: .75rem;
@@ -149,8 +159,7 @@ button {
     background: var(--raised);
     color: var(--ink);
     cursor: pointer;
-    /* Comfortable tap target: the point of this bench is running it on phones. */
-    min-height: 44px;
+    min-height: var(--tap);
 }
 
 button.primary {
@@ -173,7 +182,7 @@ button:focus-visible, [tabindex]:focus-visible, input:focus-visible, summary:foc
     align-items: center;
     gap: .35rem;
     padding: .35rem .6rem;
-    min-height: 44px;
+    min-height: var(--tap);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     background: var(--raised);
@@ -188,7 +197,7 @@ input {
     font: inherit;
     padding: .35rem .5rem;
     border: 1px solid var(--border);
-    border-radius: 6px;
+    border-radius: var(--radius-xs);
     background: var(--plane);
     color: var(--ink);
     min-height: 36px;
@@ -206,7 +215,7 @@ input[type="checkbox"] { min-height: 0; accent-color: var(--accent); }
 .progress {
     height: 6px;
     margin-top: .9rem;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     background: var(--track);
     overflow: hidden;
 }
@@ -214,7 +223,7 @@ input[type="checkbox"] { min-height: 0; accent-color: var(--accent); }
 .progress-fill {
     height: 100%;
     background: var(--series-1);
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     transition: width .2s ease-out;
 }
 
@@ -238,12 +247,13 @@ input[type="checkbox"] { min-height: 0; accent-color: var(--accent); }
 
 .tile dt { color: var(--muted); font-size: 12px; }
 
+/* No tabular-nums, deliberately: proportional figures keep a big number from
+   looking loose. The tiles are read one at a time, never compared in a column. */
 .tile dd {
     margin: .1rem 0 0;
     font-size: 1.35rem;
     font-weight: 600;
     letter-spacing: -0.01em;
-    /* Proportional figures: tabular-nums makes a big number look loose. */
 }
 
 .tile .unit { margin-left: .2rem; font-size: .62em; font-weight: 400; color: var(--muted); }
@@ -270,6 +280,8 @@ input[type="checkbox"] { min-height: 0; accent-color: var(--accent); }
 .log-panel .count { color: var(--muted); }
 .log-actions { margin-left: auto; display: flex; gap: .3rem; }
 
+/* Below --tap on purpose: these sit inside the log's summary row, where a
+   full-height control would out-weigh the disclosure it belongs to. */
 button.ghost {
     min-height: 28px;
     padding: .15rem .5rem;
@@ -288,7 +300,7 @@ button.ghost:hover:not(:disabled) { color: var(--ink); background: var(--raised)
     max-height: 20em;
     overflow-y: auto;
     color: var(--ink-2);
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: var(--font-mono);
     font-size: 12px;
 }
 
@@ -317,7 +329,6 @@ button.ghost:hover:not(:disabled) { color: var(--ink); background: var(--raised)
 .chart .grid { stroke: var(--grid); stroke-width: 1; }
 .chart .axis { stroke: var(--axis); stroke-width: 1; }
 .chart .tick { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
-.chart .axis-unit { text-anchor: end; }
 .chart .device { fill: var(--ink-2); font-size: 12px; }
 .chart .device.self { fill: var(--ink); font-weight: 600; }
 .chart .device-sub { fill: var(--muted); font-size: 10px; }
@@ -400,30 +411,38 @@ tbody tr:hover { background: var(--raised); }
 
 .empty { color: var(--muted); margin-top: 1.25rem; }
 
+/* ── utilities ────────────────────────────────────────────────────────────── */
 .sr-only {
     position: absolute;
     width: 1px; height: 1px;
     padding: 0; margin: -1px;
+    border: 0;
     overflow: hidden;
+    /* `clip` is deprecated but still the only thing some older engines honour;
+       `clip-path` is what current ones use. Both, so neither is a gap. */
     clip: rect(0 0 0 0);
+    clip-path: inset(50%);
     white-space: nowrap;
 }
 
+/* ── responsive ───────────────────────────────────────────────────────────── */
 @media (max-width: 540px) {
     .page { padding: 1.25rem .75rem 3rem; }
     .panel { padding: 1rem .85rem; }
     .controls { gap: .5rem; }
     button.primary { flex: 1 1 100%; }
 
-    /* Phone columns: identity and the headline numbers. iters is constant, and
-       min/max/when are detail the chart and the desktop view already carry —
-       better dropped than sliced in half by the panel edge. */
-    thead th:nth-child(4), tbody td:nth-child(4),
-    thead th:nth-child(7), tbody td:nth-child(7),
-    thead th:nth-child(8), tbody td:nth-child(8),
-    thead th:nth-child(9), tbody td:nth-child(9) { display: none; }
+    /* Phone columns: identity and the headline numbers. The dropped ones are
+       marked `.col-detail` in ResultsTable — iters is constant, and
+       min/max/when are detail the chart and the desktop view already carry. */
+    .col-detail { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    * { transition: none !important; }
+    *, *::before, *::after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+        scroll-behavior: auto !important;
+    }
 }
