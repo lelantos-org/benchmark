@@ -2,6 +2,7 @@
     "name": "lelantos-bench",
     "private": true,
     "version": "0.0.0",
+    "license": "MIT",
     "type": "module",
     "description": "LAN Groth16 proof + wallet-scan bench (React + Vite).",
     "scripts": {
