@@ -4,10 +4,13 @@
 
 import {
     BABYJUB_SUBGROUP_ORDER,
+    buildNoteCommitment,
     configureJubjubWasm,
+    derivePkFromIvk,
     type Field,
     Jubjub,
     type Point,
+    Poseidon,
 } from "@lelantos-org/sdk/crypto";
 import { encodeNotePayload, encryptNote, withClueBitsPrefix } from "@lelantos-org/sdk/notes";
 import { encodeInput, type ScanInput, type WireScanInput } from "@lelantos-org/sdk/sync";
@@ -40,39 +43,49 @@ const RHO_OFFSET = 1000n;
 const RCM_OFFSET = 2000n;
 const RCV_DEP_OFFSET = 3000n;
 
-interface Identity { ivk: Field; pkD: Point }
+/**
+ * `pkD` is the Jubjub point the note is encrypted to; `pk` is the Poseidon
+ * field the commitment binds. Both fall out of the same ivk, and the scanner
+ * needs them to agree — since SDK 0.18 it recomputes the commitment from the
+ * decrypted payload and drops any note whose `cm` does not match.
+ */
+interface Identity { ivk: Field; pkD: Point; pk: Field }
 
 const post = (msg: NotegenResponse, transfer: Transferable[] = []): void =>
     ctx.postMessage(msg, transfer);
 
-function makeIdentity(J: Jubjub, ivkSeed: bigint): Identity {
+function makeIdentity(J: Jubjub, P: Poseidon, ivkSeed: bigint): Identity {
     const ivk = ivkSeed % BABYJUB_SUBGROUP_ORDER || 1n;
-    return { ivk, pkD: J.mulPointEscalar(J.base8, ivk) };
+    return { ivk, pkD: J.mulPointEscalar(J.base8, ivk), pk: derivePkFromIvk(P, ivk) };
 }
 
 function esk(i: number): bigint {
     return (BigInt(i + 1) * GOLDEN_RATIO_64 + 1n) % BABYJUB_SUBGROUP_ORDER || 1n;
 }
 
-function buildNote(J: Jubjub, id: Identity, i: number): ScanInput {
+function buildNote(J: Jubjub, P: Poseidon, id: Identity, i: number): ScanInput {
     const n = BigInt(i);
+    const payload = {
+        asset:  NOTE_ASSET,
+        value:  n + 1n,
+        rho:    n + RHO_OFFSET,
+        rcm:    n + RCM_OFFSET,
+        rcvDep: n + RCV_DEP_OFFSET,
+    };
     const enc = encryptNote({
         J,
         recipientPkD: id.pkD,
         esk: esk(i),
-        plaintext: encodeNotePayload({
-            asset:  NOTE_ASSET,
-            value:  n + 1n,
-            rho:    n + RHO_OFFSET,
-            rcm:    n + RCM_OFFSET,
-            rcvDep: n + RCV_DEP_OFFSET,
-        }),
+        plaintext: encodeNotePayload(payload),
     });
     // The scanner strips a 2B clueBits prefix even with no FMD path; pad it.
     return {
         ciphertext: withClueBitsPrefix(new Uint8Array(2), enc.ciphertext),
         epk: enc.epk,
-        cm: n,
+        // The scanner reproduces this from the plaintext and rejects a note
+        // that does not match, so it has to be the real commitment — a bare
+        // counter would make every mined note a miss.
+        cm: buildNoteCommitment(P, { ...payload, pk: id.pk }),
         leafIndex: i,
         // Stored on the hit as `firstSeenBlock`. Synthetic feed, so one
         // notional block per note keeps it monotonic like a real chain.
@@ -82,14 +95,14 @@ function buildNote(J: Jubjub, id: Identity, i: number): ScanInput {
 
 async function generate(req: NotegenRequest): Promise<void> {
     const t0 = performance.now();
-    const J = await Jubjub.build();
-    const me = makeIdentity(J, MY_IVK_SEED);
-    const stranger = makeIdentity(J, STRANGER_IVK_SEED);
+    const [J, P] = await Promise.all([Jubjub.build(), Poseidon.build()]);
+    const me = makeIdentity(J, P, MY_IVK_SEED);
+    const stranger = makeIdentity(J, P, STRANGER_IVK_SEED);
 
     const mineCount = Math.round(req.n * req.mineFrac);
     const inputs: WireScanInput[] = new Array<WireScanInput>(req.n);
     for (let i = 0; i < req.n; i++) {
-        inputs[i] = encodeInput(buildNote(J, i < mineCount ? me : stranger, i));
+        inputs[i] = encodeInput(buildNote(J, P, i < mineCount ? me : stranger, i));
     }
 
     post(
