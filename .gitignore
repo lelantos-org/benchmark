@@ -2,3 +2,4 @@
 results.json
 node_modules
 dist
+public/input.*.json
