@@ -15,6 +15,13 @@ export const JUBJUB_WIRE_CONFIG = {
     jubjubWasmUrl: JUBJUB_WASM_URL,
 } as const;
 
+/**
+ * Version of the installed `@lelantos-org/circuits`, injected by vite.config.ts
+ * and stamped into every artifact URL — see {@link artifactsFor}.
+ */
+declare const __CIRCUITS_VERSION__: string;
+const CIRCUITS_VERSION = __CIRCUITS_VERSION__;
+
 /** Circuit arities the bench proves. Both ship in @lelantos-org/circuits. */
 export const SHAPES = ["2x2", "3x3"] as const;
 export type Shape = (typeof SHAPES)[number];
@@ -39,9 +46,18 @@ export interface CircuitArtifacts {
  *
  * `witnessUrl` stays relative: it is a small JSON fetched by the page, not an
  * artifact the SDK loads.
+ *
+ * The `?v=` stamp is what makes an upgrade visible. The cache key is the whole
+ * URL, query included, and `server/bench-api.ts` routes on the pathname alone,
+ * so the query changes the key without changing what is served. Without it an
+ * unversioned `/3x3.wasm` outlives `npm install`: circuits 0.10.0 kept serving
+ * 0.9.2's witness generator out of the Cache API, and the bench reported the
+ * old circuit's numbers under the new version with nothing in the log to say so
+ * — the two builds share an r1cs, so the stale wasm still produced a valid
+ * witness.
  */
 export const artifactsFor = (shape: Shape): CircuitArtifacts => ({
-    wasmPath: new URL(`/${shape}.wasm`, location.href).href,
-    zkeyPath: new URL(`/${shape}_final.zkey`, location.href).href,
+    wasmPath: new URL(`/${shape}.wasm?v=${CIRCUITS_VERSION}`, location.href).href,
+    zkeyPath: new URL(`/${shape}_final.zkey?v=${CIRCUITS_VERSION}`, location.href).href,
     witnessUrl: `/input.${shape}.json`,
 });

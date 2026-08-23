@@ -2,6 +2,20 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+// Version of the installed circuit set, stamped into the artifact URLs.
+//
+// The SDK's persistent cache keys on the URL, so unversioned paths survive an
+// `npm install`: a bumped @lelantos-org/circuits keeps serving the previous
+// wasm and zkey out of the origin's Cache API, and the bench silently measures
+// the old circuit. Read straight off the file — the package's `exports` map has
+// no "./package.json" entry, so `require`/`import` of it fails.
+const { version: circuitsVersion } = JSON.parse(
+    readFileSync(
+        fileURLToPath(new URL("./node_modules/@lelantos-org/circuits/package.json", import.meta.url)),
+        "utf8",
+    ),
+) as { version: string };
+
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
@@ -35,6 +49,9 @@ if (useHttps) console.log("note: self-signed cert — phones must accept the war
 else console.log("note: HTTPS disabled — multi-thread prover will fall back off-LAN devices.");
 
 export default defineConfig({
+    define: {
+        __CIRCUITS_VERSION__: JSON.stringify(circuitsVersion),
+    },
     plugins: [react(), benchApi({ root })],
     server: {
         host: true,          // bind 0.0.0.0 so LAN devices can reach it
