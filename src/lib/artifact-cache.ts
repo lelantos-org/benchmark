@@ -14,8 +14,9 @@ export { clearArtifactCache };
 /**
  * Whether both artifacts for `shape` are already persisted.
  *
- * Matches on the `Response` without reading it — the 3x3 zkey is ~49 MB and a
- * probe that pulled it into memory would cost more than the answer is worth.
+ * Matches on the `Response` without reading it — the zkeys run from ~21 MB
+ * (2x2) to ~40 MB (4x4), and a probe that pulled one into memory would cost
+ * more than the answer is worth.
  * Reports `false` where the Cache API is absent (non-secure context), which is
  * also the state in which nothing is cached, and swallows failures: this only
  * annotates a log line and must never fail a run.

@@ -2,6 +2,7 @@
 //
 //   public/input.2x2.json   Transact(10, 2, 2)
 //   public/input.3x3.json   Transact(10, 3, 3)
+//   public/input.4x4.json   Transact(10, 4, 4)
 //
 // Both are the same deposit story at different arities — every input dummy,
 // value entering via public_in, one real output plus pads. Mirrors
@@ -51,6 +52,7 @@ interface Shape { name: string; nIn: number; nOut: number }
 const SHAPES: Shape[] = [
     { name: "2x2", nIn: 2, nOut: 2 },
     { name: "3x3", nIn: 3, nOut: 3 },
+    { name: "4x4", nIn: 4, nOut: 4 },
 ];
 
 /** `AuxValidation.Output` wire shape — what `auxDigest` hashes. */

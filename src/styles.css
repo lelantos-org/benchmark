@@ -21,6 +21,10 @@
 
     --series-1: #2a78d6;
     --series-2: #eb6834;
+    /* Blue/vermillion/teal, from the Okabe-Ito set: the three stay separable
+       under the common colour-vision deficiencies, where a purple third would
+       collapse into --series-1. Distinct from --good, which is a pure green. */
+    --series-3: #0f9d76;
     /* Lighter step of the series-1 ramp — the progress track reads as the same
        measure as its fill. */
     --track: #cde2fb;
@@ -322,6 +326,7 @@ button.ghost:hover:not(:disabled) { color: var(--ink); background: var(--raised)
 .legend .swatch { width: 10px; height: 10px; border-radius: 2px; }
 .swatch.series-1, .stroke.series-1 { background: var(--series-1); }
 .swatch.series-2, .stroke.series-2 { background: var(--series-2); }
+.swatch.series-3, .stroke.series-3 { background: var(--series-3); }
 
 .chart-plot { position: relative; }
 .chart svg { display: block; overflow: visible; }
@@ -335,6 +340,7 @@ button.ghost:hover:not(:disabled) { color: var(--ink); background: var(--raised)
 .chart .value { fill: var(--ink-2); font-size: 11px; font-variant-numeric: tabular-nums; }
 .chart path.series-1 { fill: var(--series-1); }
 .chart path.series-2 { fill: var(--series-2); }
+.chart path.series-3 { fill: var(--series-3); }
 .chart .hit { fill: transparent; }
 
 .bar-group { outline: none; }

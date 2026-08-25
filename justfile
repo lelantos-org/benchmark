@@ -9,7 +9,7 @@ default:
 install:
     cd "{{BENCH}}" && [ -d node_modules ] || npm install --no-audit --no-fund
 
-# Build the canonical witnesses (public/input.2x2.json, public/input.3x3.json).
+# Build the canonical witnesses (public/input.<shape>.json, one per circuit arity).
 prepare: install
     cd "{{BENCH}}" && npm run prepare-input
 

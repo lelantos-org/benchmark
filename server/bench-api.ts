@@ -1,9 +1,10 @@
 // Dev/preview-server side of the bench: the pieces a static React build cannot
 // provide on its own.
 //
-//   /2x2.wasm, /2x2_final.zkey   circuit artifacts, streamed out of
-//                                node_modules/@lelantos-org/circuits (~40MB — copying
-//                                them into public/ on every install is not worth it)
+//   /<shape>.wasm,               circuit artifacts, streamed out of
+//   /<shape>_final.zkey          node_modules/@lelantos-org/circuits (tens of MB each
+//                                — copying them into public/ on every install is not
+//                                worth it)
 //   /wasm/*                      the SDK's wasm-pack packages, served as real files so
 //                                wasm-bindgen-rayon's `import.meta.url` resolves to the
 //                                served pkg dir and its sub-workers spawn at the right
@@ -25,6 +26,13 @@ const MIME: Record<string, string> = {
 
 const LONG_CACHE_EXTS = new Set([".wasm", ".zkey"]);
 
+// Circuit arities served, and the witnesses `prepare.ts` builds for them.
+//
+// Mirrors `SHAPES` in src/lib/sdk-wasm.ts rather than importing it: that module
+// reads the `__CIRCUITS_VERSION__` define at load time, which exists only
+// inside the Vite bundle and would throw here in Node.
+const SHAPES = ["2x2", "3x3", "4x4"] as const;
+
 // SharedArrayBuffer (wasm-bindgen-rayon) needs cross-origin isolation.
 const COI_HEADERS: Record<string, string> = {
     "Cross-Origin-Opener-Policy":   "same-origin",
@@ -43,12 +51,12 @@ export function benchApi({ root }: BenchApiOptions): Plugin {
     const sdkWasm = resolve(root, "node_modules", "@lelantos-org", "sdk", "wasm");
     const resultsFile = resolve(root, "results.json");
 
-    const circuitFiles: Record<string, string> = {
-        "/2x2.wasm":       join(circuitsBuild, "2x2.wasm"),
-        "/2x2_final.zkey": join(circuitsBuild, "2x2_final.zkey"),
-        "/3x3.wasm":       join(circuitsBuild, "3x3.wasm"),
-        "/3x3_final.zkey": join(circuitsBuild, "3x3_final.zkey"),
-    };
+    const circuitFiles: Record<string, string> = Object.fromEntries(
+        SHAPES.flatMap(shape => [
+            [`/${shape}.wasm`, join(circuitsBuild, `${shape}.wasm`)],
+            [`/${shape}_final.zkey`, join(circuitsBuild, `${shape}_final.zkey`)],
+        ]),
+    );
 
     const middleware = (req: IncomingMessage, res: ServerResponse, next: () => void): void => {
         const path = new URL(req.url ?? "/", "http://localhost").pathname;
@@ -173,7 +181,7 @@ function safeJoin(base: string, rel: string): string | null {
 }
 
 function warnMissingArtifacts(root: string, circuitFiles: Record<string, string>): void {
-    const witnesses = ["input.2x2.json", "input.3x3.json"].map(f => resolve(root, "public", f));
+    const witnesses = SHAPES.map(shape => resolve(root, "public", `input.${shape}.json`));
     for (const p of [...Object.values(circuitFiles), ...witnesses]) {
         if (!existsSync(p)) console.warn(`WARN: missing ${p} — run 'npm run prepare-input'`);
     }

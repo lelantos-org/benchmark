@@ -9,7 +9,7 @@ import { createProverWorker } from "./sdk-workers";
 
 /**
  * One prover per shape: each worker caches the artifacts it was built with, so
- * 2x2 and 3x3 get their own worker rather than paying a rebuild per switch.
+ * every arity gets its own worker rather than paying a rebuild per switch.
  *
  * `cacheArtifacts` is left at its default (SDK 0.9.0+), so the worker persists
  * the downloaded wasm + zkey to the origin's Cache API and a later run — in a

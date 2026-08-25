@@ -22,8 +22,8 @@ export const JUBJUB_WIRE_CONFIG = {
 declare const __CIRCUITS_VERSION__: string;
 const CIRCUITS_VERSION = __CIRCUITS_VERSION__;
 
-/** Circuit arities the bench proves. Both ship in @lelantos-org/circuits. */
-export const SHAPES = ["2x2", "3x3"] as const;
+/** Circuit arities the bench proves. All ship in @lelantos-org/circuits. */
+export const SHAPES = ["2x2", "3x3", "4x4"] as const;
 export type Shape = (typeof SHAPES)[number];
 
 export interface CircuitArtifacts {

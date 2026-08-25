@@ -6,7 +6,7 @@ so the timings reflect what a wallet would actually see.
 
 | Workload | Under test | Circuit / input |
 |---|---|---|
-| Groth16 proving | `WorkerProver` over `@lelantos-org/sdk/prover-worker` — ark-groth16 in wasm, `wasm-bindgen-rayon` thread pool | 2x2 and 3x3 from `@lelantos-org/circuits` |
+| Groth16 proving | `WorkerProver` over `@lelantos-org/sdk/prover-worker` — ark-groth16 in wasm, `wasm-bindgen-rayon` thread pool | 2x2, 3x3 and 4x4 from `@lelantos-org/circuits` |
 | Wallet scan throughput | `WorkerPoolScanner` over `@lelantos-org/sdk/scanner-worker` — trial-decrypt via `WasmJubjub` | Synthetic note feed, minted in a bench-owned worker outside the timed window |
 
 The dev server binds `0.0.0.0`: any device on the same network opens the URL,
@@ -46,6 +46,10 @@ Two panels, each with a run button:
 Recorded 2026-08-13 against SDK 0.9.0 and circuits 0.8.0, over HTTPS on a LAN.
 Each row is one run: 5 timed iterations, warm-up excluded. *Artifacts* is the
 `cachedArtifacts` flag — whether the SDK's Cache API already held the zkey.
+
+These predate SDK 0.21.0 / circuits 0.11.2 and cover 2x2 and 3x3 only; 4x4 has
+no recorded numbers yet. Its zkey is ~40 MB against 3x3's ~29 MB, so expect a
+noticeably longer cold fetch as well as a longer prove.
 
 | Device | Shape | Artifacts | Mean | Median | Min | Max | Prepare |
 |---|---|---|---|---|---|---|---|

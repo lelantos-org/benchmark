@@ -27,7 +27,11 @@ const END_RADIUS = 4;
 const TOOLTIP_INSET = 80;  // keeps a centred tooltip clear of either edge
 
 /** Colour follows the shape itself, never its position in the sorted data. */
-const SERIES_SLOT: Record<Shape, string> = { "2x2": "series-1", "3x3": "series-2" };
+const SERIES_SLOT: Record<Shape, string> = {
+    "2x2": "series-1",
+    "3x3": "series-2",
+    "4x4": "series-3",
+};
 
 interface Hover {
     x: number;

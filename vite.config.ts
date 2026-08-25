@@ -82,7 +82,28 @@ export default defineConfig({
         // Its wasm-pack glue is safe to prebundle here because both wasm
         // loaders are injected explicitly (configureJubjubWasm /
         // configureProverWasm) rather than resolved from import.meta.url.
-        include: ["@lelantos-org/sdk", "@lelantos-org/sdk/notes"],
+        //
+        // Every subpath a *worker* imports has to be named explicitly. The
+        // optimizer crawls the HTML entry, so it finds what the main thread
+        // reaches; a subpath pulled in only from inside a worker is served raw
+        // from node_modules instead, and `sdk/crypto` doing
+        // `import { poseidon1 } from "poseidon-lite/poseidon1"` against a
+        // CommonJS file is a hard runtime failure:
+        //
+        //   does not provide an export named 'poseidon1'
+        //
+        // which lands mid-scan, after the pool has already reported itself up.
+        include: [
+            "@lelantos-org/sdk",
+            "@lelantos-org/sdk/crypto",
+            "@lelantos-org/sdk/notes",
+            "@lelantos-org/sdk/sync",
+            // Belt and braces, and the actual root cause: converting these
+            // CommonJS modules to ESM once here fixes the binding for every
+            // importer, whether or not that importer was itself prebundled.
+            // The SDK pulls arities 1..8 (`sdk/crypto/poseidon.ts`).
+            ...Array.from({ length: 8 }, (_, i) => `poseidon-lite/poseidon${i + 1}`),
+        ],
         // The rayon prover pkg is fetched from /wasm/* at runtime and must keep
         // its own import.meta.url, or sub-worker spawning breaks.
         exclude: ["@lelantos-org/sdk/wasm-prover"],
