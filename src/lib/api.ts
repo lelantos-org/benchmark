@@ -1,22 +1,20 @@
-// Talks to the bench-api middleware (see server/bench-api.ts).
+// Client for the bench-api middleware (see server/bench-api.ts).
 
 import type { DeviceInfo } from "./device";
 import type { Shape } from "./sdk-wasm";
 
 /**
- * One row of results.json — what a device reports after a proof run.
+ * One row of results.json: what a device reports after a proof run.
  *
- * results.json is append-only across bench versions, so fields that older rows
- * may lack (or newer ones no longer write) are optional rather than removed.
+ * results.json is append-only across bench versions, so fields that some rows
+ * may lack are optional rather than required.
  */
 export interface BenchResult extends DeviceInfo {
     ts?: string;
     ip?: string;
-    /** Legacy free-text tag; only ever written empty, no longer emitted. */
-    label?: string;
-    /** Legacy duplicate of `platform`; no longer emitted. */
+    /** Duplicate of `platform` present on some rows; not emitted. */
     device?: string;
-    /** Circuit arity proved. Absent on rows written before 3x3 was added. */
+    /** Circuit arity proved. Absent on rows that predate multi-shape runs. */
     shape?: Shape;
     iters: number;
     timesMs: number[];
@@ -25,15 +23,15 @@ export interface BenchResult extends DeviceInfo {
     minMs: number;
     maxMs: number;
     prepareMs: number;
-    /** Uncounted first prove. Absent on rows written before it was recorded. */
+    /** Uncounted first prove. Absent on rows that predate its recording. */
     warmupMs?: number;
     /**
      * Whether the SDK's artifact cache already held this shape when `prepareMs`
-     * started — a warm row's prepare skips the zkey download. Absent on rows
-     * written before SDK 0.9.0 made that cache the default; those are cold.
+     * started; a warm prepare skips the zkey download. Absent on rows that
+     * predate the cache, which were all cold.
      */
     cachedArtifacts?: boolean;
-    /** Records forwarded by the SDK worker during the run. */
+    /** Log records forwarded by the SDK worker during the run. */
     sdkLogs: string[];
 }
 

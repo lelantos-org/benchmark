@@ -1,6 +1,6 @@
-/* Design tokens. Chart series and chrome come from the validated reference
-   palette: slot 1 blue / slot 2 orange, stepped per mode (worst adjacent CVD
-   ΔE 24.7 light, 26.8 dark). Dark is a selected set of steps, not a flip. */
+/* Design tokens. Chart series and chrome come from the reference palette:
+   slot 1 blue, slot 2 orange, stepped per mode (worst adjacent CVD ΔE 24.7
+   light, 26.8 dark). Dark mode selects its own steps rather than inverting. */
 :root {
     color-scheme: light dark;
 
@@ -21,12 +21,12 @@
 
     --series-1: #2a78d6;
     --series-2: #eb6834;
-    /* Blue/vermillion/teal, from the Okabe-Ito set: the three stay separable
-       under the common colour-vision deficiencies, where a purple third would
-       collapse into --series-1. Distinct from --good, which is a pure green. */
+    /* Blue, vermillion and teal from the Okabe-Ito set: separable under common
+       colour-vision deficiencies, where a purple third would collapse into
+       --series-1. Distinct from --good, which is a pure green. */
     --series-3: #0f9d76;
-    /* Lighter step of the series-1 ramp — the progress track reads as the same
-       measure as its fill. */
+    /* Lighter step of the series-1 ramp, so the progress track reads as the
+       same measure as its fill. */
     --track: #cde2fb;
 
     --accent: #1c5cab;
@@ -41,7 +41,7 @@
     --radius-xs: 6px;
     --radius-pill: 999px;
 
-    /* Comfortable tap target: the point of this bench is running it on phones. */
+    /* Minimum tap target; the bench is primarily run on phones. */
     --tap: 44px;
 }
 
@@ -251,8 +251,8 @@ input[type="checkbox"] { min-height: 0; accent-color: var(--accent); }
 
 .tile dt { color: var(--muted); font-size: 12px; }
 
-/* No tabular-nums, deliberately: proportional figures keep a big number from
-   looking loose. The tiles are read one at a time, never compared in a column. */
+/* Proportional figures rather than tabular-nums: tiles are read individually,
+   never compared down a column. */
 .tile dd {
     margin: .1rem 0 0;
     font-size: 1.35rem;
@@ -284,8 +284,8 @@ input[type="checkbox"] { min-height: 0; accent-color: var(--accent); }
 .log-panel .count { color: var(--muted); }
 .log-actions { margin-left: auto; display: flex; gap: .3rem; }
 
-/* Below --tap on purpose: these sit inside the log's summary row, where a
-   full-height control would out-weigh the disclosure it belongs to. */
+/* Below --tap: these sit inside the log's summary row, where a full-height
+   control would outweigh the disclosure it belongs to. */
 button.ghost {
     min-height: 28px;
     padding: .15rem .5rem;
@@ -363,7 +363,7 @@ button.ghost:hover:not(:disabled) { color: var(--ink); background: var(--raised)
     z-index: 2;
 }
 
-/* Value leads, label follows. */
+/* Value leads; label follows. */
 .tooltip strong { font-size: 15px; font-weight: 600; }
 .tooltip-key { display: inline-flex; align-items: center; gap: .35rem; color: var(--ink-2); }
 .tooltip .stroke { width: 12px; height: 2px; border-radius: 1px; }
@@ -372,8 +372,8 @@ button.ghost:hover:not(:disabled) { color: var(--ink); background: var(--raised)
 .note { margin: .5rem 0 0; color: var(--muted); font-size: 12px; }
 
 /* ── results table ────────────────────────────────────────────────────────── */
-/* Capped rather than unbounded: rows accumulate for as long as the LAN keeps
-   running the bench, and the sticky header only works inside a scroll box. */
+/* Height-capped: rows accumulate for as long as the bench is run, and the
+   sticky header requires a scroll box. */
 .table-scroll { overflow: auto; max-height: 26em; margin-top: 1.25rem; }
 
 table {
@@ -424,8 +424,8 @@ tbody tr:hover { background: var(--raised); }
     padding: 0; margin: -1px;
     border: 0;
     overflow: hidden;
-    /* `clip` is deprecated but still the only thing some older engines honour;
-       `clip-path` is what current ones use. Both, so neither is a gap. */
+    /* `clip` is deprecated but the only property some older engines honour;
+       `clip-path` covers current ones. Both are set. */
     clip: rect(0 0 0 0);
     clip-path: inset(50%);
     white-space: nowrap;
@@ -438,9 +438,9 @@ tbody tr:hover { background: var(--raised); }
     .controls { gap: .5rem; }
     button.primary { flex: 1 1 100%; }
 
-    /* Phone columns: identity and the headline numbers. The dropped ones are
-       marked `.col-detail` in ResultsTable — iters is constant, and
-       min/max/when are detail the chart and the desktop view already carry. */
+    /* Narrow layout keeps identity and the headline numbers. Dropped columns
+       are marked `.col-detail` in ResultsTable: iters is constant, and
+       min/max/when are also carried by the chart and the wide layout. */
     .col-detail { display: none; }
 }
 

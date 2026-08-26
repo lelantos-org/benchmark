@@ -1,6 +1,6 @@
-// The SDK's workers forward their log records to the client (`forwardLogs`),
-// so wiring a sink is how the bench sees rayon bring-up, artifact fetches and
-// per-stage timings from inside the shipped code.
+// The SDK's workers forward log records to the client (`forwardLogs`). Wiring a
+// sink exposes rayon bring-up, artifact fetches and per-stage timings from
+// inside the SDK.
 
 import { configureLogging, type LogRecord } from "@lelantos-org/sdk/log";
 
@@ -15,9 +15,9 @@ function format(r: LogRecord): string {
 }
 
 /**
- * Route SDK records to `listener` until the returned dispose is called.
- * Listeners are independent: several can be attached at once, and every one of
- * them sees every record (the panel sink and a per-run capture, typically).
+ * Routes SDK records to `listener` until the returned dispose function is
+ * called. Listeners are independent: several can be attached at once, and each
+ * receives every record.
  */
 export function onSdkLog(listener: LogListener): () => void {
     if (!installed) {
@@ -33,12 +33,12 @@ export function onSdkLog(listener: LogListener): () => void {
 }
 
 export interface SdkLogCapture {
-    /** Records seen so far; keeps filling until `stop` is called. */
+    /** Records seen so far; appended to until `stop` is called. */
     lines: string[];
     stop: () => void;
 }
 
-/** Collect SDK records into an array — for attaching to a posted result. */
+/** Collects SDK records into an array for attaching to a posted result. */
 export function captureSdkLogs(): SdkLogCapture {
     const lines: string[] = [];
     return { lines, stop: onSdkLog(line => { lines.push(line); }) };

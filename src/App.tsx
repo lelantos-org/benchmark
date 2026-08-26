@@ -6,8 +6,8 @@ import { ScanBenchPanel } from "./components/ScanBenchPanel";
 import { deviceInfo } from "./lib/device";
 
 export function App() {
-    // Read once and held: the values describe the machine, not the render, and
-    // the proof panel needs a stable UA string to mark this device's own rows.
+    // Read once: the values describe the machine, not the render, and the proof
+    // panel needs a stable UA string to mark this device's own rows.
     const [device] = useState(deviceInfo);
     const isolated = window.crossOriginIsolated;
 

@@ -1,14 +1,14 @@
-// Turning the raw results.json rows into something comparable across devices.
+// Aggregation of raw results.json rows into per-device comparisons.
 //
-// Rows accumulate over many sessions and many phones, so the chart works on
+// Rows accumulate across many sessions and devices, so the chart works on
 // aggregates: one entry per (device, shape), summarised by the median of that
-// pair's runs. Median rather than mean — a single thermally-throttled outlier
-// should not redefine a device.
+// pair's runs. Median rather than mean, so a single thermally-throttled outlier
+// does not redefine a device.
 
 import type { BenchResult } from "./api";
 import { SHAPES, type Shape } from "./sdk-wasm";
 
-/** Rows with no `shape` predate the 2x2/3x3 split; they were all 2x2. */
+/** Rows with no `shape` predate multi-shape runs and were all 2x2. */
 const LEGACY_SHAPE: Shape = "2x2";
 
 export interface DeviceSeries {
@@ -18,18 +18,18 @@ export interface DeviceSeries {
 }
 
 export interface DeviceRow {
-    /** Stable identity — the chart sorts and keys by this, never by rank. */
+    /** Stable identity; the chart sorts and keys by this rather than by rank. */
     key: string;
     label: string;
     browser: string;
     /**
-     * Secondary line for the chart: the browser, plus the core count only where
-     * that is what separates two otherwise identically-named entries. Always
-     * printing cores would truncate on a phone for no gain.
+     * Secondary chart line: the browser, plus the core count only where that is
+     * what separates two otherwise identically-named entries. Printing cores
+     * unconditionally truncates on narrow screens.
      */
     sub: string;
     cores: number;
-    /** True for the device currently looking at the page. */
+    /** True for the device currently viewing the page. */
     isSelf: boolean;
     byShape: Partial<Record<Shape, DeviceSeries>>;
 }
@@ -55,17 +55,19 @@ const BROWSER_PATTERNS: [RegExp, string][] = [
     [/Safari\//, "Safari"],
 ];
 
-/** Short device name from a user-agent — good enough to tell phones apart. */
+/** Short device name derived from a user-agent. */
 export function deviceLabel(row: BenchResult): string {
     const ua = row.ua || "";
-    // Android UAs carry the actual model, which beats the generic name.
+    // Android user-agents carry the model, which is more specific than the
+    // generic platform name.
     const model = ANDROID_MODEL.exec(ua)?.[1]?.replace(ANDROID_BUILD_SUFFIX, "").trim();
     if (model) return model;
-    // `||`, not `??`: rows come off disk, where a missing field can be "".
+    // `||` rather than `??`: rows come off disk, where a missing field can
+    // be an empty string.
     return match(DEVICE_PATTERNS, ua) || row.platform || row.device || "unknown";
 }
 
-/** Browser family — a Mac in Safari and in Chrome are different data points. */
+/** Browser family; the same machine under Safari and Chrome are distinct points. */
 export const browserLabel = (row: BenchResult): string =>
     match(BROWSER_PATTERNS, row.ua || "") || "browser";
 
@@ -82,14 +84,14 @@ interface Sample {
     timesByShape: Map<Shape, number[]>;
 }
 
-/** One row per device+browser+cores, fastest first. */
+/** One row per device, browser and core count, fastest first. */
 export function summariseDevices(rows: BenchResult[], selfUa: string): DeviceRow[] {
     const devices = [...collect(rows, selfUa).values()].map(summarise);
     labelDuplicates(devices);
     return devices.sort((a, b) => sortKey(a) - sortKey(b));
 }
 
-/** Buckets every usable row under its device identity. */
+/** Buckets each usable row under its device identity. */
 function collect(rows: BenchResult[], selfUa: string): Map<string, Sample> {
     const samples = new Map<string, Sample>();
 
@@ -127,7 +129,7 @@ function summarise({ row, timesByShape }: Sample): DeviceRow {
     return row;
 }
 
-/** Same name and browser twice means the core count is the distinguishing bit. */
+/** Where a name and browser repeat, the core count is the distinguishing field. */
 function labelDuplicates(devices: DeviceRow[]): void {
     const counts = new Map<string, number>();
     const name = (d: DeviceRow): string => `${d.label}·${d.browser}`;
@@ -140,7 +142,7 @@ function labelDuplicates(devices: DeviceRow[]): void {
     }
 }
 
-/** Fastest-first, on whichever shape the device actually ran. */
+/** Sort key: the fastest shape the device actually ran. */
 function sortKey(device: DeviceRow): number {
     for (const shape of SHAPES) {
         const series = device.byShape[shape];

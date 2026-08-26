@@ -5,7 +5,7 @@ import { createScanner, defaultPoolSize, generateNotes } from "../lib/scanner";
 import { useBenchRun } from "./useBenchRun";
 import type { LogHandle } from "./useLog";
 
-/** Numbers a finished scan leads with. */
+/** Headline numbers from a finished scan. */
 export interface ScanSummary {
     notes: number;
     hits: number;
@@ -26,8 +26,8 @@ export interface ScanBench {
 export function useScanBench(): ScanBench {
     const { state, status, setStatus, logHandle, start } = useBenchRun();
     const { log } = logHandle;
-    // Pinned for the session: the heading advertises this number, and the pool
-    // below is built with exactly it.
+    // Pinned for the session: the heading reports this number and the pool is
+    // built with exactly it.
     const [poolSize] = useState(defaultPoolSize);
     const [summary, setSummary] = useState<ScanSummary | null>(null);
     const scannerRef = useRef<ReturnType<typeof createScanner> | null>(null);
@@ -45,8 +45,8 @@ export function useScanBench(): ScanBench {
         const feed = await generateNotes(n, mineFrac);
         log(`generated in ${feed.ms.toFixed(0)}ms`);
 
-        // The pool is kept across runs: a wallet builds it once per session,
-        // and spawning it per scan would price worker startup into the rate.
+        // The pool is retained across runs. A wallet builds it once per session,
+        // and spawning it per scan would fold worker startup into the rate.
         scannerRef.current ??= createScanner(poolSize);
         const scanner = scannerRef.current;
 

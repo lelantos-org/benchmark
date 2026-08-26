@@ -1,6 +1,6 @@
 export interface Stats { mean: number; median: number; min: number; max: number }
 
-/** Summary of a timing sample. Median is the upper of the two middles on even n. */
+/** Summary of a timing sample. For even n the median is the upper middle value. */
 export function stats(xs: number[]): Stats {
     if (xs.length === 0) throw new Error("stats: empty sample");
     const sorted = [...xs].sort((a, b) => a - b);

@@ -1,20 +1,20 @@
 import { useCallback, useRef, useState } from "react";
 
-/** Oldest lines are dropped past this; a debug-level scan run emits thousands. */
+/** Cap on retained lines; a debug-level scan run emits thousands. Oldest drop first. */
 const MAX_LINES = 5000;
 
 export interface LogHandle {
     lines: string[];
-    /** Stable across renders — safe to hand to workers and effects. */
+    /** Stable across renders; safe to pass to workers and effects. */
     log: (...parts: unknown[]) => void;
     clear: () => void;
 }
 
 export function useLog(): LogHandle {
     const [lines, setLines] = useState<string[]>([]);
-    // Workers fire log lines faster than React commits; buffer through a ref so
-    // no line is dropped by a stale closure. Mutated in place and snapshotted on
-    // each append — rebuilding it per line is quadratic over a long run.
+    // Workers emit lines faster than React commits, so buffer through a ref to
+    // avoid dropping lines via a stale closure. Mutated in place and snapshotted
+    // on each append; rebuilding the array per line is quadratic over a long run.
     const buffer = useRef<string[]>([]);
 
     const log = useCallback((...parts: unknown[]) => {

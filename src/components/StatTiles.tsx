@@ -1,11 +1,11 @@
 export interface Stat {
     label: string;
     value: string;
-    /** Rendered smaller next to the value, so the figure itself stays clean. */
+    /** Rendered smaller alongside the value. */
     unit?: string;
 }
 
-/** KPI row for the numbers a finished run leads with. */
+/** KPI row for the headline numbers of a finished run. */
 export function StatTiles({ items }: { items: Stat[] }) {
     if (items.length === 0) return null;
     return (

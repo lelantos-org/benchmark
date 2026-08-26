@@ -1,14 +1,12 @@
-// Dev/preview-server side of the bench: the pieces a static React build cannot
-// provide on its own.
+// Dev and preview server routes the bench needs beyond a static React build.
 //
-//   /<shape>.wasm,               circuit artifacts, streamed out of
-//   /<shape>_final.zkey          node_modules/@lelantos-org/circuits (tens of MB each
-//                                — copying them into public/ on every install is not
-//                                worth it)
-//   /wasm/*                      the SDK's wasm-pack packages, served as real files so
-//                                wasm-bindgen-rayon's `import.meta.url` resolves to the
-//                                served pkg dir and its sub-workers spawn at the right
-//                                path. Bundling this breaks threading.
+//   /<shape>.wasm,               circuit artifacts, streamed from
+//   /<shape>_final.zkey          node_modules/@lelantos-org/circuits rather than
+//                                copied into public/ (tens of MB each)
+//   /wasm/*                      the SDK's wasm-pack packages, served as real files
+//                                so wasm-bindgen-rayon's `import.meta.url` resolves
+//                                to the served package directory and its sub-workers
+//                                spawn at the correct path. Bundling breaks threading.
 //   POST /result, GET /results   append-only JSONL of runs collected from LAN devices
 
 import { appendFileSync, createReadStream, existsSync, readFileSync, statSync } from "node:fs";
@@ -29,8 +27,8 @@ const LONG_CACHE_EXTS = new Set([".wasm", ".zkey"]);
 // Circuit arities served, and the witnesses `prepare.ts` builds for them.
 //
 // Mirrors `SHAPES` in src/lib/sdk-wasm.ts rather than importing it: that module
-// reads the `__CIRCUITS_VERSION__` define at load time, which exists only
-// inside the Vite bundle and would throw here in Node.
+// reads the `__CIRCUITS_VERSION__` define at load time, which exists only inside
+// the Vite bundle and throws under Node.
 const SHAPES = ["2x2", "3x3", "4x4"] as const;
 
 // SharedArrayBuffer (wasm-bindgen-rayon) needs cross-origin isolation.
@@ -42,7 +40,7 @@ const COI_HEADERS: Record<string, string> = {
 };
 
 export interface BenchApiOptions {
-    /** Project root; all served paths resolve under it. */
+    /** Project root; all served paths resolve beneath it. */
     root: string;
 }
 
@@ -61,13 +59,12 @@ export function benchApi({ root }: BenchApiOptions): Plugin {
     const middleware = (req: IncomingMessage, res: ServerResponse, next: () => void): void => {
         const path = new URL(req.url ?? "/", "http://localhost").pathname;
 
-        // Stamp the isolation headers on *every* response, including the 304s
-        // Vite answers revalidation with. `server.headers` only covers responses
-        // that carry a body, and WebKit refuses to start a worker whose script
-        // response lacks COEP/CORP — so a header-less 304 kills it. The scan
-        // pool spawns several workers from one URL at once, so all but the
-        // first revalidate and die; that is the iOS Safari failure this
-        // prevents. Chromium is lenient here, which is why it never showed.
+        // Set the isolation headers on every response, including the 304s Vite
+        // answers revalidation with. `server.headers` covers only responses that
+        // carry a body, and WebKit refuses to start a worker whose script
+        // response lacks COEP/CORP, so a header-less 304 fails the spawn. The
+        // scan pool spawns several workers from one URL at once, so all but the
+        // first revalidate. Chromium does not enforce this.
         for (const [k, v] of Object.entries(COI_HEADERS)) res.setHeader(k, v);
 
         if (req.method === "POST" && path === "/result") return postResult(req, res, resultsFile);
@@ -83,9 +80,9 @@ export function benchApi({ root }: BenchApiOptions): Plugin {
 
     return {
         name: "lelantos-bench-api",
-        // Installed eagerly, not via the returned post hook: these routes must
-        // win over Vite's static/SPA-fallback middleware, which would answer
-        // /2x2.wasm and /results with index.html.
+        // Installed eagerly rather than as a post hook: these routes must take
+        // precedence over Vite's static and SPA-fallback middleware, which would
+        // answer /2x2.wasm and /results with index.html.
         configureServer(server: ViteDevServer) {
             warnMissingArtifacts(root, circuitFiles);
             server.middlewares.use(middleware);
@@ -99,8 +96,8 @@ export function benchApi({ root }: BenchApiOptions): Plugin {
 
 // ── handlers ────────────────────────────────────────────────────────────────
 /**
- * Fields the console line reads back. Everything else a client sends is stored
- * verbatim — the row shape is owned by src/lib/api.ts, not by this server.
+ * Fields read back for the console line. Everything else a client sends is
+ * stored verbatim; the row shape is owned by src/lib/api.ts.
  */
 interface PostedResult {
     platform?: unknown;
@@ -136,7 +133,7 @@ function getResults(res: ServerResponse, resultsFile: string): void {
 function streamWasmPkg(res: ServerResponse, base: string, rel: string): void {
     let file = safeJoin(base, rel);
     if (!file) return send(res, 403, "forbidden");
-    // wasm-bindgen rayon workers do `import('../../..')`, which resolves to a
+    // wasm-bindgen rayon workers issue `import('../../..')`, which resolves to a
     // directory URL. Resolve it via package.json#main so the browser gets a file.
     if (existsSync(file) && statSync(file).isDirectory()) {
         const pkgPath = join(file, "package.json");
@@ -174,7 +171,7 @@ function streamFile(res: ServerResponse, path: string): void {
     createReadStream(path).pipe(res);
 }
 
-/** Resolve `rel` under `base`, rejecting traversal outside it. */
+/** Resolves `rel` under `base`, rejecting traversal outside it. */
 function safeJoin(base: string, rel: string): string | null {
     const file = join(base, normalize(rel).replace(/^(\.\.[/\\])+/, ""));
     return file.startsWith(base) ? file : null;

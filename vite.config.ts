@@ -5,10 +5,9 @@ import { fileURLToPath } from "node:url";
 // Version of the installed circuit set, stamped into the artifact URLs.
 //
 // The SDK's persistent cache keys on the URL, so unversioned paths survive an
-// `npm install`: a bumped @lelantos-org/circuits keeps serving the previous
-// wasm and zkey out of the origin's Cache API, and the bench silently measures
-// the old circuit. Read straight off the file — the package's `exports` map has
-// no "./package.json" entry, so `require`/`import` of it fails.
+// `npm install` and the origin's Cache API keeps serving the previous wasm and
+// zkey. Read directly from the file: the package's `exports` map has no
+// "./package.json" entry, so importing it fails.
 const { version: circuitsVersion } = JSON.parse(
     readFileSync(
         fileURLToPath(new URL("./node_modules/@lelantos-org/circuits/package.json", import.meta.url)),
@@ -26,8 +25,8 @@ import { lanIPs } from "./server/lan.js";
 const root = fileURLToPath(new URL(".", import.meta.url));
 const PORT = parseInt(process.env.PORT ?? "8787", 10);
 
-// HTTPS on by default: SharedArrayBuffer needs a secure context, and LAN
-// devices do not get one over plain http. HTTPS=0 opts out for localhost work.
+// HTTPS is on by default: SharedArrayBuffer needs a secure context, which LAN
+// devices do not get over plain http. HTTPS=0 opts out for localhost work.
 const useHttps = process.env.HTTPS !== "0";
 const cert = useHttps ? ensureSelfSignedCert(resolve(root, ".certs")) : null;
 
@@ -35,8 +34,8 @@ const https = cert
     ? { key: readFileSync(cert.key), cert: readFileSync(cert.cert) }
     : undefined;
 
-// Cross-origin isolation for the multi-threaded prover. Applied to every
-// response Vite serves, including the module workers.
+// Cross-origin isolation for the multi-threaded prover, applied to every
+// response Vite serves, including module workers.
 const headers = {
     "Cross-Origin-Opener-Policy": "same-origin",
     "Cross-Origin-Embedder-Policy": "require-corp",
@@ -54,7 +53,7 @@ export default defineConfig({
     },
     plugins: [react(), benchApi({ root })],
     server: {
-        host: true,          // bind 0.0.0.0 so LAN devices can reach it
+        host: true,          // bind 0.0.0.0 so LAN devices can reach the server
         port: PORT,
         strictPort: true,
         https,
@@ -72,40 +71,39 @@ export default defineConfig({
     },
     build: {
         target: "es2022",
-        // Circuit artifacts and the SDK wasm packages are served by benchApi,
-        // never inlined.
+        // Circuit artifacts and the SDK wasm packages are served by benchApi and
+        // must not be inlined.
         assetsInlineLimit: 0,
     },
     optimizeDeps: {
-        // The SDK must go through the dep optimizer: it imports CJS
-        // (poseidon-lite), and a raw ESM copy cannot bind those named exports.
-        // Its wasm-pack glue is safe to prebundle here because both wasm
-        // loaders are injected explicitly (configureJubjubWasm /
-        // configureProverWasm) rather than resolved from import.meta.url.
+        // The SDK must go through the dep optimizer: it imports CommonJS
+        // (poseidon-lite), whose named exports a raw ESM copy cannot bind. Its
+        // wasm-pack glue is safe to prebundle because both wasm loaders are
+        // injected explicitly (configureJubjubWasm / configureProverWasm) rather
+        // than resolved from import.meta.url.
         //
-        // Every subpath a *worker* imports has to be named explicitly. The
-        // optimizer crawls the HTML entry, so it finds what the main thread
-        // reaches; a subpath pulled in only from inside a worker is served raw
-        // from node_modules instead, and `sdk/crypto` doing
-        // `import { poseidon1 } from "poseidon-lite/poseidon1"` against a
-        // CommonJS file is a hard runtime failure:
+        // Every subpath a worker imports must be listed explicitly. The optimizer
+        // crawls the HTML entry, so it finds what the main thread reaches; a
+        // subpath imported only from inside a worker is served raw from
+        // node_modules, and `sdk/crypto` importing
+        // `{ poseidon1 } from "poseidon-lite/poseidon1"` against a CommonJS file
+        // then fails at runtime with:
         //
         //   does not provide an export named 'poseidon1'
         //
-        // which lands mid-scan, after the pool has already reported itself up.
+        // mid-scan, after the pool has reported itself ready.
         include: [
             "@lelantos-org/sdk",
             "@lelantos-org/sdk/crypto",
             "@lelantos-org/sdk/notes",
             "@lelantos-org/sdk/sync",
-            // Belt and braces, and the actual root cause: converting these
-            // CommonJS modules to ESM once here fixes the binding for every
-            // importer, whether or not that importer was itself prebundled.
-            // The SDK pulls arities 1..8 (`sdk/crypto/poseidon.ts`).
+            // Converting these CommonJS modules to ESM here fixes the binding
+            // for every importer, prebundled or not. The SDK uses arities 1..8
+            // (`sdk/crypto/poseidon.ts`).
             ...Array.from({ length: 8 }, (_, i) => `poseidon-lite/poseidon${i + 1}`),
         ],
-        // The rayon prover pkg is fetched from /wasm/* at runtime and must keep
-        // its own import.meta.url, or sub-worker spawning breaks.
+        // The rayon prover package is fetched from /wasm/* at runtime and must
+        // keep its own import.meta.url, or sub-worker spawning breaks.
         exclude: ["@lelantos-org/sdk/wasm-prover"],
     },
 });

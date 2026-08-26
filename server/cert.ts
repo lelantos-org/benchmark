@@ -1,10 +1,10 @@
-// Self-signed cert for the dev server. HTTPS is not optional here: the
-// multi-thread Rust prover needs a secure context for SharedArrayBuffer, and
-// `localhost` only counts as secure on the host itself — LAN devices need TLS.
+// Self-signed certificate for the dev server. The multi-threaded prover needs a
+// secure context for SharedArrayBuffer, and `localhost` counts as secure only on
+// the host itself, so LAN devices require TLS.
 //
-// The SAN list carries every LAN IPv4 of this machine, so a phone hitting
-// https://192.168.x.y:8787 gets a cert that matches the address it typed.
-// iOS/Safari reject certs whose SANs miss the IP outright.
+// The SAN list carries every LAN IPv4 of this machine, so a device reaching
+// https://192.168.x.y:8787 gets a certificate matching the address it used.
+// iOS Safari rejects certificates whose SANs omit the IP.
 
 import { execSync } from "node:child_process";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";

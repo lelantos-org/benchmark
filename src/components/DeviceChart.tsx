@@ -1,8 +1,8 @@
 // Mean prove time per device, grouped by circuit shape.
 //
-// Form: grouped horizontal bars — the shapes are the subject (identity), and
-// device names are long, so bars beat columns. The results table below is the
-// table view of the same numbers, so nothing here is reachable only by hover.
+// Grouped horizontal bars: device names are long and read better in a left
+// gutter than under vertical columns. The results table below presents the same
+// numbers, so no value here is reachable only by hover.
 
 import { useMemo, useState } from "react";
 
@@ -13,20 +13,20 @@ import { formatCount } from "../lib/format";
 import { summariseDevices, type DeviceRow } from "../lib/results";
 import { SHAPES, type Shape } from "../lib/sdk-wasm";
 
-/** Beyond this the chart stops being scannable; the rest stay in the table. */
+/** Devices shown in the chart; the remainder appear only in the table. */
 const MAX_DEVICES = 10;
 
-const BAR_H = 16;          // ≤ 24px: thin marks
-const BAR_GAP = 2;         // surface gap between the bars of one group
+const BAR_H = 16;
+const BAR_GAP = 2;         // gap between the bars of one group
 const GROUP_PAD = 18;
-const HIT_PAD = 4;         // grows each bar's hover/focus target past the mark
+const HIT_PAD = 4;         // extends each bar's hover/focus target past the mark
 const PAD_TOP = 6;
-const AXIS_BAND = 26;      // room for the x tick labels inside the SVG
-const VALUE_GUTTER = 60;   // room for the value label past the longest bar
+const AXIS_BAND = 26;      // space for the x tick labels inside the SVG
+const VALUE_GUTTER = 60;   // space for the value label past the longest bar
 const END_RADIUS = 4;
 const TOOLTIP_INSET = 80;  // keeps a centred tooltip clear of either edge
 
-/** Colour follows the shape itself, never its position in the sorted data. */
+/** Colour is keyed to the shape, not to its position in the sorted data. */
 const SERIES_SLOT: Record<Shape, string> = {
     "2x2": "series-1",
     "3x3": "series-2",
@@ -46,8 +46,8 @@ export function DeviceChart({ rows, selfUa }: { rows: BenchResult[]; selfUa: str
     const [box, width] = useElementWidth<HTMLElement>();
     const [hover, setHover] = useState<Hover | null>(null);
 
-    // Re-summarising every row on each hover would be wasted work: the pointer
-    // moves far more often than results arrive.
+    // The pointer moves far more often than results arrive, so summarisation is
+    // memoised rather than repeated per hover.
     const all = useMemo(() => summariseDevices(rows, selfUa), [rows, selfUa]);
     const devices = useMemo(() => all.slice(0, MAX_DEVICES), [all]);
     const shapes = useMemo(() => SHAPES.filter(s => devices.some(d => d.byShape[s])), [devices]);
@@ -108,8 +108,8 @@ export function DeviceChart({ rows, selfUa }: { rows: BenchResult[]; selfUa: str
                 )}
 
                 {hover && (
-                    // Visual echo of the focused bar's aria-label, so it is
-                    // hidden from assistive tech rather than announced twice.
+                    // Visual echo of the focused bar's aria-label; hidden from
+                    // assistive technology to avoid announcing it twice.
                     <div className="tooltip" aria-hidden="true"
                         style={{ left: clamp(hover.x, TOOLTIP_INSET, width - TOOLTIP_INSET), top: hover.y }}>
                         <strong>{scale.format(hover.ms)} {scale.unit}</strong>
@@ -145,7 +145,7 @@ interface DeviceGroupProps {
     onHover: (hover: Hover | null) => void;
 }
 
-/** One device's label pair plus its bar per shape. */
+/** One device's label pair and one bar per shape. */
 function DeviceGroup({ device, shapes, scale, top, groupH, labelGutter, plotW, x, onHover }: DeviceGroupProps) {
     return (
         <g>
@@ -180,8 +180,8 @@ function DeviceGroup({ device, shapes, scale, top, groupH, labelGutter, plotW, x
                         <text className="value" x={tip + 8} y={y + BAR_H / 2} dominantBaseline="middle">
                             {scale.format(series.medianMeanMs)}
                         </text>
-                        {/* Transparent target spanning the plot: a 16px bar is a
-                            pinpoint, and a short bar would be near unhittable. */}
+                        {/* Transparent target spanning the plot: a 16px bar is
+                            too small a pointer target on its own. */}
                         <rect className="hit" x={labelGutter} y={y - HIT_PAD}
                             width={plotW} height={BAR_H + HIT_PAD * 2} />
                     </g>

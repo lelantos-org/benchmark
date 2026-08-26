@@ -8,18 +8,18 @@ import { useLog, type LogHandle } from "./useLog";
 export interface BenchRun {
     state: RunState;
     status: string;
-    /** Fine-grained progress text; the terminal states are set by `start`. */
+    /** Fine-grained progress text; terminal states are set by `start`. */
     setStatus: (s: string) => void;
     logHandle: LogHandle;
     /**
-     * Runs `body` as one bench run: SDK records are mirrored into the panel log
-     * for its duration, and anything thrown lands in the `error` state rather
+     * Runs `body` as one bench run. SDK records are mirrored into the panel log
+     * for its duration, and anything thrown resolves to the `error` state rather
      * than an unhandled rejection.
      */
     start: (body: () => Promise<void>) => Promise<void>;
 }
 
-/** State machine both panels share, so they report progress and failure alike. */
+/** Run state machine shared by both panels, unifying progress and failure reporting. */
 export function useBenchRun(): BenchRun {
     const [state, setState] = useState<RunState>("idle");
     const [status, setStatus] = useState("");

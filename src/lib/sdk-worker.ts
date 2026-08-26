@@ -1,13 +1,13 @@
-// Bridge between DOM `Worker` and the `WorkerLike` shape the SDK expects.
+// Bridge between the DOM `Worker` type and the `WorkerLike` shape the SDK expects.
 
 import type { WorkerProver } from "@lelantos-org/sdk/prover";
 
-/** The SDK's `WorkerLike` — structural, and not exported under its own name. */
+/** The SDK's structural `WorkerLike` type, which it does not export by name. */
 export type SdkWorker = ConstructorParameters<typeof WorkerProver>[0]["worker"];
 
 /**
- * A DOM `Worker` satisfies `WorkerLike` at runtime; only the declared
- * `onmessage` handler types are contravariant, which TS cannot reconcile. The
- * cast is confined to this one function.
+ * A DOM `Worker` satisfies `WorkerLike` at runtime; the two differ only in the
+ * contravariant `onmessage` handler types, which TypeScript cannot reconcile.
+ * The cast is confined to this function.
  */
 export const toSdkWorker = (worker: Worker): SdkWorker => worker as unknown as SdkWorker;

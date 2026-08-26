@@ -1,6 +1,6 @@
-// Measurement half of the proof bench: everything that has to happen between
-// "user pressed run" and "we have numbers". Deliberately free of React so the
-// timed path can be exercised without a component tree.
+// Measurement half of the proof bench: everything between the run request and
+// the resulting numbers. Free of React so the timed path can be exercised
+// without a component tree.
 
 import { type BenchResult, fetchWitness } from "./api";
 import { artifactsCached } from "./artifact-cache";
@@ -15,22 +15,21 @@ export const ITERS = 5;
 
 export interface ShapeMeasurement {
     /**
-     * Worker spawn + artifact load + rayon pool bring-up.
+     * Worker spawn, artifact load and rayon pool bring-up.
      *
-     * From SDK 0.9.0 the artifact load is a Cache API read once this origin has
-     * fetched the shape, so the first run on a device measures a cold download
-     * and every later one does not. Compare `prepare` across devices only for
-     * runs in the same state — clear site data (or the SDK's
-     * `clearArtifactCache()`) to force a cold one.
+     * The artifact load is a Cache API read once this origin has fetched the
+     * shape, so only the first run on a device measures a cold download.
+     * `prepare` is comparable across devices only for runs in the same state;
+     * `clearArtifactCache()` forces a cold one.
      */
     prepareMs: number;
-    /** First prove, excluded from `timesMs` — pays JIT and lazy-init costs. */
+    /** First prove, excluded from `timesMs`; absorbs JIT and lazy-init costs. */
     warmupMs: number;
     /** The `ITERS` timed proves. */
     timesMs: number[];
     /** Whether the artifacts were already cached when `prepareMs` started. */
     cachedArtifacts: boolean;
-    /** SDK records emitted while this shape ran. */
+    /** SDK log records emitted while this shape ran. */
     sdkLogs: string[];
 }
 
@@ -39,18 +38,18 @@ export type ProofPhase = "witness" | "prepare" | "warmup" | "iter";
 export interface ProofProgress {
     shape: Shape;
     phase: ProofPhase;
-    /** 1-based iteration, only meaningful while `phase` is `"iter"`. */
+    /** 1-based iteration; meaningful only while `phase` is `"iter"`. */
     iter: number;
 }
 
 export interface ShapeReporter {
-    /** Where the run is now — drives the status line and the progress bar. */
+    /** Current run position; drives the status line and progress bar. */
     progress: (p: ProofProgress) => void;
-    /** Verbose line for the log panel. */
+    /** Emits a verbose line to the log panel. */
     log: (line: string) => void;
 }
 
-/** Share of one shape's work done. Rough by design: it paces a bar, not a clock. */
+/** Approximate share of one shape's work completed; paces the progress bar. */
 export function progressFraction(p: ProofProgress): number {
     switch (p.phase) {
         case "witness": return 0.02;
@@ -69,7 +68,7 @@ export function progressLabel(p: ProofProgress): string {
     }
 }
 
-/** The row a finished shape posts to `results.json`. */
+/** Builds the row a finished shape posts to `results.json`. */
 export function toResultRow(device: DeviceInfo, shape: Shape, run: ShapeMeasurement): BenchResult {
     const summary = stats(run.timesMs);
     return {
@@ -88,11 +87,11 @@ export function toResultRow(device: DeviceInfo, shape: Shape, run: ShapeMeasurem
     };
 }
 
-/** Proves `shape` once to warm up, then `ITERS` timed times. Always disposes. */
+/** Proves `shape` once to warm up, then `ITERS` timed iterations. Always disposes. */
 export async function measureShape(shape: Shape, report: ShapeReporter): Promise<ShapeMeasurement> {
-    // A second sink alongside the panel's: `onSdkLog` fans out to every
-    // listener, so this captures the same records into a per-shape array that
-    // gets attached to the posted result.
+    // A second sink alongside the panel's. `onSdkLog` fans out to every
+    // listener, so this collects the same records into a per-shape array that
+    // is attached to the posted result.
     const capture = captureSdkLogs();
     let prover: ReturnType<typeof createProver> | null = null;
     try {
@@ -100,10 +99,10 @@ export async function measureShape(shape: Shape, report: ShapeReporter): Promise
         const input = await fetchWitness(artifactsFor(shape).witnessUrl);
         report.log(`input.${shape}.json loaded`);
 
-        // preload() is the SDK's own warm-up entry point: spawn worker, load
-        // wasm + zkey (network or Cache API), bring up the rayon pool.
+        // preload() is the SDK's warm-up entry point: spawn the worker, load
+        // wasm and zkey (network or Cache API), bring up the rayon pool.
         report.progress({ shape, phase: "prepare", iter: 0 });
-        // Probed before preload, which is what fills the cache.
+        // Probed before preload, which fills the cache.
         const warm = await artifactsCached(shape);
         report.log(`artifacts: ${warm ? "cached (warm prepare)" : "not cached (cold prepare)"}`);
         const tPrepare = performance.now();

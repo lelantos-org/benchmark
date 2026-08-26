@@ -10,11 +10,11 @@ import { stats, type Stats } from "../lib/stats";
 import { useBenchRun } from "./useBenchRun";
 import type { LogHandle } from "./useLog";
 
-/** What a finished shape contributes to the summary tiles. */
+/** A finished shape's contribution to the summary tiles. */
 export interface ShapeSummary extends Stats {
     shape: Shape;
     prepareMs: number;
-    /** Qualifies `prepareMs`: a warm prepare skipped the artifact download. */
+    /** Qualifies `prepareMs`: a warm prepare skips the artifact download. */
     cachedArtifacts: boolean;
 }
 
@@ -38,14 +38,14 @@ export function useProofBench(): ProofBench {
     const [progress, setProgress] = useState(0);
     const [summary, setSummary] = useState<ShapeSummary[]>([]);
 
-    /** Reload after a run appends rows. */
+    /** Reloads the results table after a run appends rows. */
     const refresh = useCallback(async () => {
         const rows = await loadResults(log);
         if (rows) setResults(rows);
     }, [log]);
 
-    // Initial load. State lands after the fetch resolves, and is dropped if the
-    // panel unmounted first.
+    // Initial load. State is applied after the fetch resolves and discarded if
+    // the panel unmounted first.
     useEffect(() => {
         let live = true;
         void (async () => {
@@ -68,8 +68,8 @@ export function useProofBench(): ProofBench {
                 log,
                 progress: p => {
                     setStatus(progressLabel(p));
-                    // Each shape owns an equal slice of the bar; within it the
-                    // phase weights carry the detail.
+                    // Each shape owns an equal slice of the bar; phase weights
+                    // provide the detail within a slice.
                     setProgress((i + progressFraction(p)) / shapes.length);
                 },
             });
@@ -92,7 +92,7 @@ export function useProofBench(): ProofBench {
     return { state, status, progress, summary, results, logHandle, run };
 }
 
-/** Fetches the results table, reporting failure to the log instead of throwing. */
+/** Fetches the results table, reporting failure to the log rather than throwing. */
 async function loadResults(log: (line: string) => void): Promise<BenchResult[] | null> {
     try {
         return await fetchResults();

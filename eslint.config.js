@@ -1,6 +1,6 @@
-// Flat config. Type-aware linting is on for src/ and the Node side: the rules
-// that matter here (floating promises around worker RPC, unchecked `any` out of
-// the SDK's wire types) all need the type checker.
+// Flat config. Type-aware linting is enabled for src/ and the Node side: the
+// relevant rules (floating promises around worker RPC, unchecked `any` from the
+// SDK's wire types) require the type checker.
 
 import js from "@eslint/js";
 import reactHooks from "eslint-plugin-react-hooks";
@@ -37,13 +37,13 @@ export default tseslint.config(
         languageOptions: { globals: globals.node },
     },
     {
-        // This config is the only plain JS file, and no tsconfig covers it.
+        // This config is the only plain JS file and no tsconfig covers it.
         files: ["**/*.js"],
         extends: [tseslint.configs.disableTypeChecked],
         languageOptions: { globals: globals.node },
     },
     {
-        // The bench prints to the console on purpose — it is the run log.
+        // Console output is the bench's run log.
         rules: { "no-console": "off" },
     },
 );

@@ -2,12 +2,12 @@ import type { BenchResult } from "../lib/api";
 import { formatMsInt, formatWhen } from "../lib/format";
 import { browserLabel, deviceLabel } from "../lib/results";
 
-// Milliseconds in every timing column: a table is read down, not across, so one
-// unit per column beats switching to seconds on the larger rows.
+// Every timing column is in milliseconds: a table is read down a column, so one
+// unit per column keeps rows comparable.
 //
-// `detail` marks the columns the narrow layout drops. It travels as a class on
-// both the header and its cells, so reordering this list cannot desynchronise
-// from the stylesheet the way positional `nth-child` rules did.
+// `detail` marks the columns the narrow layout drops. It is applied as a class
+// on both the header and its cells, so reordering this list cannot desynchronise
+// it from the stylesheet.
 const COLUMNS = [
     { label: "device" },
     { label: "shape" },
@@ -22,7 +22,7 @@ const COLUMNS = [
 
 const DETAIL = "col-detail";
 
-/** Table view of every recorded run — the chart's WCAG-clean twin. */
+/** Table view of every recorded run; the accessible equivalent of the chart. */
 export function ResultsTable({ rows, selfUa }: { rows: BenchResult[]; selfUa: string }) {
     if (rows.length === 0) {
         return <p className="empty">No runs recorded yet. Run a bench and the table fills in.</p>;

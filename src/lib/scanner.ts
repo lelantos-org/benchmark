@@ -1,5 +1,5 @@
-// Scan path under test: the SDK's `WorkerPoolScanner` over its shipped
-// scanner worker — the same object a wallet uses to sync.
+// Scan path under test: the SDK's `WorkerPoolScanner` over its shipped scanner
+// worker, the same path a wallet uses to sync.
 
 import { decodeInput, type ScanInput, WorkerPoolScanner } from "@lelantos-org/sdk/sync";
 
@@ -11,18 +11,18 @@ import { createScannerWorker } from "./sdk-workers";
 export interface NoteFeed {
     ivk: bigint;
     inputs: ScanInput[];
-    /** Time spent minting the feed. Not part of the measured scan. */
+    /** Time spent minting the feed. Excluded from the measured scan. */
     ms: number;
 }
 
-/** Worker count the bench runs the pool at, mirroring a wallet's own sizing. */
+/** Worker count the pool runs at, mirroring a wallet's sizing. */
 export const defaultPoolSize = (): number =>
     Math.max(2, Math.min(8, navigator.hardwareConcurrency || 4));
 
 /**
- * Pool size is always pinned rather than left to the SDK default: the panel
- * heading reports it, and an implicit default could drift away from the number
- * shown, silently misattributing the notes/s figure.
+ * Pool size is pinned rather than left to the SDK default: the panel heading
+ * reports it, and an implicit default could drift from the number shown,
+ * misattributing the notes/s figure.
  */
 export function createScanner(size: number = defaultPoolSize()): WorkerPoolScanner {
     return new WorkerPoolScanner({
@@ -32,7 +32,7 @@ export function createScanner(size: number = defaultPoolSize()): WorkerPoolScann
     });
 }
 
-/** One-shot generator worker; terminated once its feed is delivered. */
+/** One-shot generator worker, terminated once its feed is delivered. */
 export function generateNotes(n: number, mineFrac: number): Promise<NoteFeed> {
     const worker = new Worker(new URL("../workers/notegen.worker.ts", import.meta.url), { type: "module" });
     return new Promise<NoteFeed>((resolve, reject) => {

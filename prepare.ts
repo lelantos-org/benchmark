@@ -1,12 +1,11 @@
-// Build the canonical deposit witnesses the bench proves against:
+// Generates the deposit witnesses the proof bench runs against:
 //
 //   public/input.2x2.json   Transact(10, 2, 2)
 //   public/input.3x3.json   Transact(10, 3, 3)
 //   public/input.4x4.json   Transact(10, 4, 4)
 //
-// Both are the same deposit story at different arities — every input dummy,
-// value entering via public_in, one real output plus pads. Mirrors
-// contracts/script/fixtures/gen_proof_deposit.ts up to the FS-derived z.
+// Each file is the same deposit at a different arity: all inputs dummy, value
+// entering via public_in, one real output plus zero-value pads.
 
 import { writeFileSync, mkdirSync } from "fs";
 import { dirname, resolve } from "path";
@@ -55,7 +54,7 @@ const SHAPES: Shape[] = [
     { name: "4x4", nIn: 4, nOut: 4 },
 ];
 
-/** `AuxValidation.Output` wire shape — what `auxDigest` hashes. */
+/** `AuxValidation.Output` wire shape consumed by `auxDigest`. */
 function auxToWire(a: OutputAux): AuxOutput {
     return {
         clueRx: a.clueR[0],
@@ -72,12 +71,12 @@ function buildWitness(P: Poseidon, J: Jubjub, shape: Shape): Record<string, unkn
 
     const inputs = Array.from({ length: shape.nIn }, (_, i) => dummyInputAt(P, DEPTH, BigInt(i)));
 
-    // out_rho is pinned in-circuit to DeriveRho(nullifier[0], j); anything else
+    // The circuit pins out_rho to DeriveRho(nullifier[0], j); any other value
     // fails the `out_rho[j] === out_rho_d[j].rho` constraint.
     const outRho = (j: number): Field => buildRho(P, inputs[0].nf, j);
 
-    // Slot 0 carries the deposited value; the rest are zero-value pads, which
-    // is what a real deposit looks like at any arity.
+    // Slot 0 carries the deposited value; the remaining slots are zero-value
+    // pads.
     const outputs: Note[] = Array.from({ length: shape.nOut }, (_, j) => ({
         asset:  ASSET,
         value:  j === 0 ? PUBLIC_IN : 0n,
@@ -88,14 +87,13 @@ function buildWitness(P: Poseidon, J: Jubjub, shape: Shape): Record<string, unkn
         rcvDep: BigInt(30 + j),
     }));
 
-    // Encrypted-note payloads: the clue witnesses are SNARK-bound and the aux
-    // digest binds ephPub + ciphertext alongside them.
+    // Encrypted-note payloads: the clue witnesses are SNARK-bound, and the aux
+    // digest binds ephPub and ciphertext alongside them.
     //
-    // The recipient's flag key is the sender's view of their address, built in
-    // two steps: `ck = B · dk_root` is the clue key an address publishes, and
-    // expanding it gives the γ points `X_i = ck + B·h_i`. Only the first step
-    // touches the secret, which is why a sender can do the second from a
-    // published address alone.
+    // The recipient flag key is derived in two steps: `ck = B · dk_root` is the
+    // clue key an address publishes, and expanding it yields the γ points
+    // `X_i = ck + B·h_i`. Only the first step requires the secret, so a sender
+    // can perform the second from a published address alone.
     const aliceFlagKey = fmdExpandFlagKey(J, P, fmdClueKeyFromRoot(J, ALICE_DK_SEED));
     const alicePkD = J.mulPointEscalar(J.base8, ALICE_IVK);
     const aux = outputs.map((note, j) => buildOutputAux({

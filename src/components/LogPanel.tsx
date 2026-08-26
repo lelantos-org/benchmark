@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-/** Scrolled this close to the bottom still counts as "following the tail". */
+/** Distance from the bottom within which the view still counts as pinned. */
 const PIN_SLACK_PX = 40;
-/** How long the copy button acknowledges a copy. */
+/** How long the copy button shows its acknowledgement. */
 const COPIED_MS = 1500;
 
 export function LogPanel({ lines, onClear }: { lines: string[]; onClear?: () => void }) {
     const ref = useRef<HTMLDivElement>(null);
-    // Auto-scroll only while the reader is at the tail: scrolling up mid-run to
-    // read an earlier line must not be undone by the next log record.
+    // Auto-scroll only while pinned to the tail, so scrolling up mid-run is not
+    // undone by the next log record.
     const pinned = useRef(true);
     const [copied, setCopied] = useState(false);
 
@@ -22,11 +22,10 @@ export function LogPanel({ lines, onClear }: { lines: string[]; onClear?: () => 
         if (el) pinned.current = el.scrollHeight - el.scrollTop - el.clientHeight <= PIN_SLACK_PX;
     }, []);
 
-    // Nothing to show and nothing to do — an empty log frame is just furniture.
     const empty = lines.length === 0;
 
-    // Cleared on unmount: the panel can disappear (a cleared log) inside the
-    // acknowledgement window, and a timer would then set state on nothing.
+    // Cleared on unmount: the panel can disappear inside the acknowledgement
+    // window, leaving the timer to set state on an unmounted component.
     const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     useEffect(() => () => { if (copiedTimer.current) clearTimeout(copiedTimer.current); }, []);
 

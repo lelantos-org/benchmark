@@ -17,8 +17,8 @@ export function ProofBenchPanel({ selfUa }: { selfUa: string }) {
     const [clearing, setClearing] = useState(false);
     const busy = state === "running";
 
-    // The SDK persists artifacts by default, so every run after the first on a
-    // device measures a warm prepare. This is the way back to a cold one.
+    // The SDK persists artifacts by default, so every run after the first
+    // measures a warm prepare. Clearing the cache restores a cold one.
     const clearCache = async () => {
         setClearing(true);
         try {
@@ -32,7 +32,7 @@ export function ProofBenchPanel({ selfUa }: { selfUa: string }) {
     };
 
     // Rebuilt from SHAPES rather than spliced, so selection order always matches
-    // the checkbox order regardless of which box was clicked first.
+    // checkbox order regardless of click order.
     const toggle = (shape: Shape) => setSelected(prev =>
         SHAPES.filter(s => (s === shape ? !prev.includes(s) : prev.includes(s))),
     );

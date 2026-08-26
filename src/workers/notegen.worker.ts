@@ -1,6 +1,6 @@
-// Synthetic note feed for the scan bench: `mineFrac` of the notes are
-// encrypted to our ivk, the rest to a stranger's, so trial-decrypt does the
-// same mix of hits and misses a real wallet sync sees.
+// Synthetic note feed for the scan bench. `mineFrac` of the notes are encrypted
+// to our ivk and the rest to a stranger's, so trial-decrypt sees the same mix of
+// hits and misses as a real wallet sync.
 
 import {
     BABYJUB_SUBGROUP_ORDER,
@@ -24,17 +24,17 @@ configureJubjubWasm({
     wasm: JUBJUB_WASM_URL,
 });
 
-// Both DOM and WebWorker libs are in scope for src/, so `self` widens to
-// `Window`. Pin the worker scope once instead of casting at each use.
+// Both the DOM and WebWorker libs are in scope for src/, so `self` widens to
+// `Window`. Pin the worker scope once rather than casting at each use.
 const ctx = self as unknown as DedicatedWorkerGlobalScope;
 
 /**
- * Fixed seeds: the feed only has to be deterministic and to split into
- * decryptable vs not — nothing here is security-sensitive.
+ * Fixed seeds. The feed only needs to be deterministic and to split into
+ * decryptable and non-decryptable notes; none of this is security-sensitive.
  */
 const MY_IVK_SEED = 1234n;
 const STRANGER_IVK_SEED = 9999n;
-/** 2^64/φ, the usual Fibonacci-hashing multiplier — spreads esk across the run. */
+/** 2^64/φ, the Fibonacci-hashing multiplier; spreads esk across the run. */
 const GOLDEN_RATIO_64 = 0x9e3779b97f4a7c15n;
 
 const NOTE_ASSET = 1n;
@@ -44,10 +44,10 @@ const RCM_OFFSET = 2000n;
 const RCV_DEP_OFFSET = 3000n;
 
 /**
- * `pkD` is the Jubjub point the note is encrypted to; `pk` is the Poseidon
- * field the commitment binds. Both fall out of the same ivk, and the scanner
- * needs them to agree — since SDK 0.18 it recomputes the commitment from the
- * decrypted payload and drops any note whose `cm` does not match.
+ * `pkD` is the Jubjub point the note is encrypted to; `pk` is the Poseidon field
+ * the commitment binds. Both derive from the same ivk and must agree: the
+ * scanner recomputes the commitment from the decrypted payload and drops any
+ * note whose `cm` does not match.
  */
 interface Identity { ivk: Field; pkD: Point; pk: Field }
 
@@ -78,17 +78,16 @@ function buildNote(J: Jubjub, P: Poseidon, id: Identity, i: number): ScanInput {
         esk: esk(i),
         plaintext: encodeNotePayload(payload),
     });
-    // The scanner strips a 2B clueBits prefix even with no FMD path; pad it.
+    // The scanner strips a 2-byte clueBits prefix even with no FMD path.
     return {
         ciphertext: withClueBitsPrefix(new Uint8Array(2), enc.ciphertext),
         epk: enc.epk,
-        // The scanner reproduces this from the plaintext and rejects a note
-        // that does not match, so it has to be the real commitment — a bare
-        // counter would make every mined note a miss.
+        // The scanner reproduces this from the plaintext and rejects any note
+        // that does not match, so it must be the real commitment.
         cm: buildNoteCommitment(P, { ...payload, pk: id.pk }),
         leafIndex: i,
-        // Stored on the hit as `firstSeenBlock`. Synthetic feed, so one
-        // notional block per note keeps it monotonic like a real chain.
+        // Stored on the hit as `firstSeenBlock`. One notional block per note
+        // keeps it monotonic, as on a real chain.
         blockNumber: i,
     };
 }
@@ -119,7 +118,7 @@ async function handle(req: NotegenRequest): Promise<void> {
     }
 }
 
-// The listener itself stays sync: an async one returns a promise the event
-// target drops, so a rejection would surface as an unhandled rejection instead
-// of the error message the client is waiting for.
+// The listener stays synchronous: an async one returns a promise the event
+// target discards, so a rejection would surface as an unhandled rejection
+// instead of the error message the client awaits.
 ctx.addEventListener("message", (ev: MessageEvent<NotegenRequest>) => { void handle(ev.data); });

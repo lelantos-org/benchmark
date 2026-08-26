@@ -1,9 +1,9 @@
-// The bench's view of the SDK's persistent artifact cache (0.9.0+).
+// The bench's view of the SDK's persistent artifact cache.
 //
-// The cache is on by default and origin-scoped, so `prepare` measures a cold
-// download only until this origin has fetched a shape once. Neither the numbers
-// nor the log are readable without knowing which state a run was in, hence the
-// probe below; `clearArtifactCache` is what puts a device back to cold.
+// The cache is enabled by default and origin-scoped, so `prepare` measures a
+// cold download only until this origin has fetched a shape once. Runs are only
+// comparable when that state is known, hence the probe below;
+// `clearArtifactCache` returns a device to the cold state.
 
 import { ARTIFACT_CACHE_NAME, clearArtifactCache } from "@lelantos-org/sdk/prover";
 
@@ -14,12 +14,11 @@ export { clearArtifactCache };
 /**
  * Whether both artifacts for `shape` are already persisted.
  *
- * Matches on the `Response` without reading it — the zkeys run from ~21 MB
- * (2x2) to ~40 MB (4x4), and a probe that pulled one into memory would cost
- * more than the answer is worth.
- * Reports `false` where the Cache API is absent (non-secure context), which is
- * also the state in which nothing is cached, and swallows failures: this only
- * annotates a log line and must never fail a run.
+ * Matches on the `Response` without reading its body: the zkeys range from
+ * ~21 MB (2x2) to ~40 MB (4x4). Returns `false` where the Cache API is absent
+ * (non-secure context), which is also the state in which nothing is cached, and
+ * swallows failures — the result only annotates a log line and must never fail
+ * a run.
  */
 export async function artifactsCached(shape: Shape): Promise<boolean> {
     if (typeof caches === "undefined") return false;

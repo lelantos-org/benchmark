@@ -1,7 +1,4 @@
-/**
- * Run progress. The track is a lighter step of the fill's own ramp so the
- * remaining work still reads as part of the same measure.
- */
+/** Run progress. The track is a lighter step of the fill's own colour ramp. */
 export function ProgressBar({ value, label }: { value: number; label: string }) {
     const pct = Math.max(0, Math.min(1, value)) * 100;
     return (
