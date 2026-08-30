@@ -3,7 +3,8 @@
 
 import { WorkerProver } from "@lelantos-org/sdk/prover";
 
-import { artifactsFor, type Shape } from "./sdk-wasm";
+import type { Shape } from "../../shapes";
+import { artifactsFor } from "./sdk-wasm";
 import { toSdkWorker } from "./sdk-worker";
 import { createProverWorker } from "./sdk-workers";
 

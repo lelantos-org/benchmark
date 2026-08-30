@@ -2,11 +2,12 @@
 // the resulting numbers. Free of React so the timed path can be exercised
 // without a component tree.
 
+import type { Shape } from "../../shapes";
 import { type BenchResult, fetchWitness } from "./api";
 import { artifactsCached } from "./artifact-cache";
 import type { DeviceInfo } from "./device";
 import { createProver } from "./prover";
-import { artifactsFor, type Shape } from "./sdk-wasm";
+import { artifactsFor } from "./sdk-wasm";
 import { captureSdkLogs } from "./sdk-logs";
 import { stats } from "./stats";
 

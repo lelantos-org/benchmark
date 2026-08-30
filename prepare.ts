@@ -1,11 +1,9 @@
 // Generates the deposit witnesses the proof bench runs against:
 //
-//   public/input.2x2.json   Transact(10, 2, 2)
-//   public/input.3x3.json   Transact(10, 3, 3)
-//   public/input.4x4.json   Transact(10, 4, 4)
+//   public/input.4x6.json   Transact(11, 4, 6)
 //
-// Each file is the same deposit at a different arity: all inputs dummy, value
-// entering via public_in, one real output plus zero-value pads.
+// The file is a deposit: all inputs dummy, value entering via public_in, one
+// real output plus zero-value pads. One is written per entry in `CIRCUITS`.
 
 import { writeFileSync, mkdirSync } from "fs";
 import { dirname, resolve } from "path";
@@ -33,9 +31,10 @@ import {
 } from "@lelantos-org/sdk/notes";
 import { auxDigest, type AuxOutput } from "@lelantos-org/sdk/protocol";
 
+import { CIRCUITS, type Circuit } from "./shapes.js";
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const DEPTH = 10;
 const ASSET = 1n;
 const PUBLIC_IN = 100n;
 const PUBLIC_OUT = 0n;
@@ -45,14 +44,6 @@ const ALICE_NSK = 11n;
 
 const ALICE_IVK = 7n;
 const ALICE_DK_SEED = 0xa11cen;
-
-interface Shape { name: string; nIn: number; nOut: number }
-
-const SHAPES: Shape[] = [
-    { name: "2x2", nIn: 2, nOut: 2 },
-    { name: "3x3", nIn: 3, nOut: 3 },
-    { name: "4x4", nIn: 4, nOut: 4 },
-];
 
 /** `AuxValidation.Output` wire shape consumed by `auxDigest`. */
 function auxToWire(a: OutputAux): AuxOutput {
@@ -65,11 +56,11 @@ function auxToWire(a: OutputAux): AuxOutput {
     };
 }
 
-function buildWitness(P: Poseidon, J: Jubjub, shape: Shape): Record<string, unknown> {
-    const tree = new MerkleTree(P, DEPTH);
+function buildWitness(P: Poseidon, J: Jubjub, circuit: Circuit): Record<string, unknown> {
+    const tree = new MerkleTree(P, circuit.depth);
     const aliceP: Field = derivePk(P, ALICE_NSK);
 
-    const inputs = Array.from({ length: shape.nIn }, (_, i) => dummyInputAt(P, DEPTH, BigInt(i)));
+    const inputs = Array.from({ length: circuit.nIn }, (_, i) => dummyInputAt(P, circuit.depth, BigInt(i)));
 
     // The circuit pins out_rho to DeriveRho(nullifier[0], j); any other value
     // fails the `out_rho[j] === out_rho_d[j].rho` constraint.
@@ -77,7 +68,7 @@ function buildWitness(P: Poseidon, J: Jubjub, shape: Shape): Record<string, unkn
 
     // Slot 0 carries the deposited value; the remaining slots are zero-value
     // pads.
-    const outputs: Note[] = Array.from({ length: shape.nOut }, (_, j) => ({
+    const outputs: Note[] = Array.from({ length: circuit.nOut }, (_, j) => ({
         asset:  ASSET,
         value:  j === 0 ? PUBLIC_IN : 0n,
         pk:     aliceP,
@@ -128,10 +119,10 @@ async function main() {
     const P = await Poseidon.build();
     const J = await Jubjub.build();
 
-    for (const shape of SHAPES) {
-        const outPath = resolve(__dirname, "public", `input.${shape.name}.json`);
+    for (const circuit of CIRCUITS) {
+        const outPath = resolve(__dirname, "public", `input.${circuit.name}.json`);
         mkdirSync(dirname(outPath), { recursive: true });
-        writeFileSync(outPath, JSON.stringify(buildWitness(P, J, shape), null, 2) + "\n");
+        writeFileSync(outPath, JSON.stringify(buildWitness(P, J, circuit), null, 2) + "\n");
         console.log(`wrote -> ${outPath}`);
     }
 }

@@ -48,7 +48,7 @@ export function ResultsTable({ rows, selfUa }: { rows: BenchResult[]; selfUa: st
                                 {deviceLabel(row)}
                                 <span className="muted"> · {browserLabel(row)}</span>
                             </th>
-                            <td>{row.shape ?? "2x2"}</td>
+                            <td>{row.shape ?? "—"}</td>
                             <td>{row.cores || ""}</td>
                             <td className={DETAIL}>{row.iters || ""}</td>
                             <td className="lead">{formatMsInt(row.meanMs)}</td>

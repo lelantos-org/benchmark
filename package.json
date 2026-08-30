@@ -31,8 +31,8 @@
         "vite": "^8.2.1"
     },
     "dependencies": {
-        "@lelantos-org/circuits": "^0.11.2",
-        "@lelantos-org/sdk": "^0.26.0",
+        "@lelantos-org/circuits": "^0.12.1",
+        "@lelantos-org/sdk": "^0.28.0",
         "react": "^19.2.8",
         "react-dom": "^19.2.8"
     }

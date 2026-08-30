@@ -6,6 +6,8 @@
 // and the wasm-pack glue then fetches its `_bg.wasm` neighbour relative to that
 // URL.
 
+import type { Shape } from "../../shapes";
+
 export const JUBJUB_MODULE_URL = "/wasm/jubjub/pkg/jubjub_wasm.js";
 export const JUBJUB_WASM_URL = "/wasm/jubjub/pkg/jubjub_wasm_bg.wasm";
 
@@ -22,10 +24,6 @@ export const JUBJUB_WIRE_CONFIG = {
 declare const __CIRCUITS_VERSION__: string;
 const CIRCUITS_VERSION = __CIRCUITS_VERSION__;
 
-/** Circuit arities the bench proves, all shipped in @lelantos-org/circuits. */
-export const SHAPES = ["2x2", "3x3", "4x4"] as const;
-export type Shape = (typeof SHAPES)[number];
-
 export interface CircuitArtifacts {
     /** Absolute — see {@link artifactsFor}. */
     wasmPath: string;
@@ -38,10 +36,10 @@ export interface CircuitArtifacts {
  * Prover artifact URLs are absolute: the SDK's persistent cache keys on the URL
  * and the Cache API stores `Request`s, which must be http(s), so the SDK skips
  * persistence for any path failing its `^https?://` test. A root-relative
- * `/3x3_final.zkey` loads but re-downloads on every reload and worker spawn.
+ * `/4x6_final.zkey` loads but re-downloads on every reload and worker spawn.
  *
  * The origin is part of the key, so serving the bench over `localhost` and over
- * a LAN address caches the ~85 MB once per origin.
+ * a LAN address caches the ~50 MB once per origin.
  *
  * `witnessUrl` stays relative: it is a small JSON fetched by the page, not an
  * artifact the SDK loads.

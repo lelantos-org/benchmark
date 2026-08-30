@@ -6,7 +6,7 @@ so the timings reflect what a wallet would actually see.
 
 | Workload | Under test | Circuit / input |
 |---|---|---|
-| Groth16 proving | `WorkerProver` over `@lelantos-org/sdk/prover-worker` — ark-groth16 in wasm, `wasm-bindgen-rayon` thread pool | 2x2, 3x3 and 4x4 from `@lelantos-org/circuits` |
+| Groth16 proving | `WorkerProver` over `@lelantos-org/sdk/prover-worker` — ark-groth16 in wasm, `wasm-bindgen-rayon` thread pool | 4x6 from `@lelantos-org/circuits` |
 | Wallet scan throughput | `WorkerPoolScanner` over `@lelantos-org/sdk/scanner-worker` — trial-decrypt via `WasmJubjub` | Synthetic note feed, minted in a bench-owned worker outside the timed window |
 
 The dev server binds `0.0.0.0`: any device on the same network opens the URL,
@@ -42,6 +42,11 @@ Two panels, each with a run button:
   total, per-note and notes/s. Client-side only; nothing is posted.
 
 ## Reference results
+
+All numbers below predate circuits 0.11, which replaced the 2x2/3x3/4x4 set with
+a single 4x6 arity at Merkle depth 11. They are kept as a record of the older
+circuits and are not comparable to a 4x6 run; `results.json` likewise still holds
+those rows, which the chart skips and the table shows under their own shape.
 
 Recorded 2026-08-25 against SDK 0.20.0 and circuits 0.10.0, over HTTPS on a LAN.
 Each row is one run: 5 timed iterations, warm-up excluded. *Artifacts* is the

@@ -11,7 +11,7 @@ import type { BenchResult } from "../lib/api";
 import { barPath, clamp, niceTicks, timeScale, truncate, type TimeScale } from "../lib/chart";
 import { formatCount } from "../lib/format";
 import { summariseDevices, type DeviceRow } from "../lib/results";
-import { SHAPES, type Shape } from "../lib/sdk-wasm";
+import { SHAPES, type Shape } from "../../shapes";
 
 /** Devices shown in the chart; the remainder appear only in the table. */
 const MAX_DEVICES = 10;
@@ -28,9 +28,7 @@ const TOOLTIP_INSET = 80;  // keeps a centred tooltip clear of either edge
 
 /** Colour is keyed to the shape, not to its position in the sorted data. */
 const SERIES_SLOT: Record<Shape, string> = {
-    "2x2": "series-1",
-    "3x3": "series-2",
-    "4x4": "series-3",
+    "4x6": "series-1",
 };
 
 interface Hover {

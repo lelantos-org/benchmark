@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useProofBench, type ShapeSummary } from "../hooks/useProofBench";
 import { clearArtifactCache } from "../lib/artifact-cache";
 import { formatMsInt } from "../lib/format";
-import { SHAPES, type Shape } from "../lib/sdk-wasm";
+import { SHAPES, type Shape } from "../../shapes";
 import { DeviceChart } from "./DeviceChart";
 import { LogPanel } from "./LogPanel";
 import { ProgressBar } from "./ProgressBar";
@@ -48,15 +48,19 @@ export function ProofBenchPanel({ selfUa }: { selfUa: string }) {
                 <button className="primary" onClick={() => void run(selected)} disabled={busy || selected.length === 0}>
                     {busy ? "Running…" : `Run ${selected.join(" + ") || "—"}`}
                 </button>
-                <div className="choices" role="group" aria-label="Circuit shapes">
-                    {SHAPES.map(shape => (
-                        <label key={shape} className="choice">
-                            <input type="checkbox" checked={selected.includes(shape)} disabled={busy}
-                                onChange={() => toggle(shape)} />
-                            {shape}
-                        </label>
-                    ))}
-                </div>
+                {/* A one-shape circuit set has nothing to choose between, and a
+                    lone checkbox would only offer to disable the run button. */}
+                {SHAPES.length > 1 && (
+                    <div className="choices" role="group" aria-label="Circuit shapes">
+                        {SHAPES.map(shape => (
+                            <label key={shape} className="choice">
+                                <input type="checkbox" checked={selected.includes(shape)} disabled={busy}
+                                    onChange={() => toggle(shape)} />
+                                {shape}
+                            </label>
+                        ))}
+                    </div>
+                )}
                 <button className="ghost" onClick={() => void clearCache()} disabled={busy || clearing}>
                     {clearing ? "Clearing…" : "Clear artifact cache"}
                 </button>

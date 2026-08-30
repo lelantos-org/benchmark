@@ -14,6 +14,8 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { extname, join, normalize, resolve } from "node:path";
 import type { Plugin, ViteDevServer, PreviewServer } from "vite";
 
+import { SHAPES } from "../shapes.js";
+
 const MIME: Record<string, string> = {
     ".js":   "application/javascript; charset=utf-8",
     ".mjs":  "application/javascript; charset=utf-8",
@@ -23,13 +25,6 @@ const MIME: Record<string, string> = {
 };
 
 const LONG_CACHE_EXTS = new Set([".wasm", ".zkey"]);
-
-// Circuit arities served, and the witnesses `prepare.ts` builds for them.
-//
-// Mirrors `SHAPES` in src/lib/sdk-wasm.ts rather than importing it: that module
-// reads the `__CIRCUITS_VERSION__` define at load time, which exists only inside
-// the Vite bundle and throws under Node.
-const SHAPES = ["2x2", "3x3", "4x4"] as const;
 
 // SharedArrayBuffer (wasm-bindgen-rayon) needs cross-origin isolation.
 const COI_HEADERS: Record<string, string> = {
@@ -82,7 +77,7 @@ export function benchApi({ root }: BenchApiOptions): Plugin {
         name: "lelantos-bench-api",
         // Installed eagerly rather than as a post hook: these routes must take
         // precedence over Vite's static and SPA-fallback middleware, which would
-        // answer /2x2.wasm and /results with index.html.
+        // answer /4x6.wasm and /results with index.html.
         configureServer(server: ViteDevServer) {
             warnMissingArtifacts(root, circuitFiles);
             server.middlewares.use(middleware);

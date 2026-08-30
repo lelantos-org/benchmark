@@ -5,7 +5,7 @@ import { deviceInfo } from "../lib/device";
 import { errMsg } from "../lib/errors";
 import { measureShape, progressFraction, progressLabel, toResultRow } from "../lib/proof-bench";
 import type { RunState } from "../lib/run-state";
-import type { Shape } from "../lib/sdk-wasm";
+import type { Shape } from "../../shapes";
 import { stats, type Stats } from "../lib/stats";
 import { useBenchRun } from "./useBenchRun";
 import type { LogHandle } from "./useLog";

@@ -1,7 +1,6 @@
 // Client for the bench-api middleware (see server/bench-api.ts).
 
 import type { DeviceInfo } from "./device";
-import type { Shape } from "./sdk-wasm";
 
 /**
  * One row of results.json: what a device reports after a proof run.
@@ -14,8 +13,12 @@ export interface BenchResult extends DeviceInfo {
     ip?: string;
     /** Duplicate of `platform` present on some rows; not emitted. */
     device?: string;
-    /** Circuit arity proved. Absent on rows that predate multi-shape runs. */
-    shape?: Shape;
+    /**
+     * Circuit arity proved. Typed as a plain string rather than `Shape`: rows
+     * outlive the circuit set that produced them, so a recorded arity need not
+     * be one the installed circuits still ship. Narrow with `isShape`.
+     */
+    shape?: string;
     iters: number;
     timesMs: number[];
     meanMs: number;

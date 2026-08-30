@@ -6,10 +6,7 @@
 // does not redefine a device.
 
 import type { BenchResult } from "./api";
-import { SHAPES, type Shape } from "./sdk-wasm";
-
-/** Rows with no `shape` predate multi-shape runs and were all 2x2. */
-const LEGACY_SHAPE: Shape = "2x2";
+import { SHAPES, isShape, type Shape } from "../../shapes";
 
 export interface DeviceSeries {
     /** Median of that shape's `meanMs` across runs. */
@@ -97,6 +94,11 @@ function collect(rows: BenchResult[], selfUa: string): Map<string, Sample> {
 
     for (const row of rows) {
         if (typeof row.meanMs !== "number" || !Number.isFinite(row.meanMs)) continue;
+        // Rows from earlier circuit sets measured arities the current circuits no
+        // longer ship; their times are not comparable, so they are left to the
+        // table rather than aggregated into the chart.
+        const shape = row.shape;
+        if (!shape || !isShape(shape)) continue;
 
         const label = deviceLabel(row);
         const browser = browserLabel(row);
@@ -113,7 +115,6 @@ function collect(rows: BenchResult[], selfUa: string): Map<string, Sample> {
         }
         if (row.ua === selfUa) sample.row.isSelf = true;
 
-        const shape = row.shape ?? LEGACY_SHAPE;
         const times = sample.timesByShape.get(shape) ?? [];
         times.push(row.meanMs);
         sample.timesByShape.set(shape, times);

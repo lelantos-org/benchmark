@@ -7,18 +7,18 @@
 
 import { ARTIFACT_CACHE_NAME, clearArtifactCache } from "@lelantos-org/sdk/prover";
 
-import { artifactsFor, type Shape } from "./sdk-wasm";
+import type { Shape } from "../../shapes";
+import { artifactsFor } from "./sdk-wasm";
 
 export { clearArtifactCache };
 
 /**
  * Whether both artifacts for `shape` are already persisted.
  *
- * Matches on the `Response` without reading its body: the zkeys range from
- * ~21 MB (2x2) to ~40 MB (4x4). Returns `false` where the Cache API is absent
- * (non-secure context), which is also the state in which nothing is cached, and
- * swallows failures — the result only annotates a log line and must never fail
- * a run.
+ * Matches on the `Response` without reading its body: the 4x6 zkey alone is
+ * ~46 MB. Returns `false` where the Cache API is absent (non-secure context),
+ * which is also the state in which nothing is cached, and swallows failures —
+ * the result only annotates a log line and must never fail a run.
  */
 export async function artifactsCached(shape: Shape): Promise<boolean> {
     if (typeof caches === "undefined") return false;
