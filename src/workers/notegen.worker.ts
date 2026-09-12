@@ -92,27 +92,55 @@ function buildNote(J: Jubjub, P: Poseidon, id: Identity, i: number): ScanInput {
     };
 }
 
-async function generate(req: NotegenRequest): Promise<void> {
-    const t0 = performance.now();
+/** Both identities plus the curve context, built once per request. */
+async function context() {
     const [J, P] = await Promise.all([Jubjub.build(), Poseidon.build()]);
-    const me = makeIdentity(J, P, MY_IVK_SEED);
-    const stranger = makeIdentity(J, P, STRANGER_IVK_SEED);
+    return {
+        J,
+        P,
+        me: makeIdentity(J, P, MY_IVK_SEED),
+        stranger: makeIdentity(J, P, STRANGER_IVK_SEED),
+    };
+}
 
-    const mineCount = Math.round(req.n * req.mineFrac);
-    const inputs: WireScanInput[] = new Array<WireScanInput>(req.n);
-    for (let i = 0; i < req.n; i++) {
+const buffersOf = (inputs: WireScanInput[]): Transferable[] =>
+    inputs.flatMap(i => [i.ciphertext.buffer, i.epk.buffer]);
+
+async function generate(n: number, mineFrac: number): Promise<void> {
+    const t0 = performance.now();
+    const { J, P, me, stranger } = await context();
+
+    const mineCount = Math.round(n * mineFrac);
+    const inputs: WireScanInput[] = new Array<WireScanInput>(n);
+    for (let i = 0; i < n; i++) {
         inputs[i] = encodeInput(buildNote(J, P, i < mineCount ? me : stranger, i));
     }
 
+    post({ type: "generated", ivk: me.ivk.toString(), inputs, ms: performance.now() - t0 }, buffersOf(inputs));
+}
+
+async function generatePool(own: number, foreign: number): Promise<void> {
+    const t0 = performance.now();
+    const { J, P, me, stranger } = await context();
+
+    // Disjoint index ranges: `buildNote` derives every payload field from the
+    // index, so this keeps every commitment in the pool distinct. The feed
+    // relies on that — it cycles the foreign pool across rows and dedupes hits
+    // by commitment.
+    const mine = Array.from({ length: own }, (_, i) => encodeInput(buildNote(J, P, me, i)));
+    const others = Array.from({ length: foreign }, (_, i) =>
+        encodeInput(buildNote(J, P, stranger, own + i)));
+
     post(
-        { type: "generated", ivk: me.ivk.toString(), inputs, ms: performance.now() - t0 },
-        inputs.flatMap(i => [i.ciphertext.buffer, i.epk.buffer]),
+        { type: "pool", ivk: me.ivk.toString(), mine, foreign: others, ms: performance.now() - t0 },
+        [...buffersOf(mine), ...buffersOf(others)],
     );
 }
 
 async function handle(req: NotegenRequest): Promise<void> {
     try {
-        await generate(req);
+        if (req.type === "generate-pool") await generatePool(req.own, req.foreign);
+        else await generate(req.n, req.mineFrac);
     } catch (e) {
         post({ type: "error", message: errMsg(e) });
     }

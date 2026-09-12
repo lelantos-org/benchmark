@@ -24,6 +24,15 @@ const MIME: Record<string, string> = {
     ".zkey": "application/octet-stream",
 };
 
+// Circuit artifacts only. They are requested with a `?v=<circuits version>`
+// query, so a new build is a new URL and caching them for a year is free.
+//
+// Deliberately NOT applied to the SDK's own wasm packages under `/wasm/`: those
+// are build output, they are requested without any version query, and
+// `just use-local-sdk` replaces them in place. Served immutable, a rebuilt
+// `prover_bg.wasm` stays hidden behind the copy the browser cached — and the
+// failure is a bare `WebAssembly.instantiate()` import error, because the stale
+// wasm and the fresh glue disagree about the module's imports.
 const LONG_CACHE_EXTS = new Set([".wasm", ".zkey"]);
 
 // SharedArrayBuffer (wasm-bindgen-rayon) needs cross-origin isolation.
@@ -137,7 +146,7 @@ function streamWasmPkg(res: ServerResponse, base: string, rel: string): void {
             file = join(file, pkg.main ?? "index.js");
         }
     }
-    streamFile(res, file);
+    streamFile(res, file, "no-store");
 }
 
 // ── plumbing ────────────────────────────────────────────────────────────────
@@ -150,7 +159,7 @@ function sendJson(res: ServerResponse, status: number, value: unknown): void {
     send(res, status, JSON.stringify(value), "application/json; charset=utf-8");
 }
 
-function streamFile(res: ServerResponse, path: string): void {
+function streamFile(res: ServerResponse, path: string, cacheControl?: string): void {
     if (!existsSync(path)) return send(res, 404, "not found");
     const st = statSync(path);
     if (st.isDirectory()) return send(res, 404, "is a directory");
@@ -158,9 +167,9 @@ function streamFile(res: ServerResponse, path: string): void {
     res.writeHead(200, {
         "Content-Type": MIME[ext] ?? "application/octet-stream",
         "Content-Length": st.size,
-        "Cache-Control": LONG_CACHE_EXTS.has(ext)
-            ? "public, max-age=31536000, immutable"
-            : "no-store",
+        "Cache-Control":
+            cacheControl ??
+            (LONG_CACHE_EXTS.has(ext) ? "public, max-age=31536000, immutable" : "no-store"),
         ...COI_HEADERS,
     });
     createReadStream(path).pipe(res);

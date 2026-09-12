@@ -5,7 +5,6 @@ import { WorkerProver } from "@lelantos-org/sdk/prover";
 
 import type { Shape } from "../../shapes";
 import { artifactsFor } from "./sdk-wasm";
-import { toSdkWorker } from "./sdk-worker";
 import { createProverWorker } from "./sdk-workers";
 
 /**
@@ -20,7 +19,7 @@ import { createProverWorker } from "./sdk-workers";
 export function createProver(shape: Shape, threads?: number): WorkerProver {
     const { wasmPath, zkeyPath } = artifactsFor(shape);
     return new WorkerProver({
-        worker: toSdkWorker(createProverWorker()),
+        worker: createProverWorker(),
         paths: { wasmPath, zkeyPath },
         threads,
     });

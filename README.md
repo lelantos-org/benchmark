@@ -1,6 +1,6 @@
 # MASP LAN Benchmark
 
-Measures two SDK workloads on real devices across a LAN. Both drive the code
+Measures three SDK workloads on real devices across a LAN. All drive the code
 `@lelantos-org/sdk` ships to wallets — there is no bench-local reimplementation —
 so the timings reflect what a wallet would actually see.
 
@@ -8,6 +8,7 @@ so the timings reflect what a wallet would actually see.
 |---|---|---|
 | Groth16 proving | `WorkerProver` over `@lelantos-org/sdk/prover-worker` — ark-groth16 in wasm, `wasm-bindgen-rayon` thread pool | 4x6 from `@lelantos-org/circuits` |
 | Wallet scan throughput | `WorkerPoolScanner` over `@lelantos-org/sdk/scanner-worker` — trial-decrypt via `WasmJubjub` | Synthetic note feed, minted in a bench-owned worker outside the timed window |
+| Wallet sync: FMD vs full | `syncWallet` cold — the real paging loop, cursor, checkpointing and scanner pool | Synthetic `NoteSource` over a minted note pool; the link is modelled, the crypto is not |
 
 The dev server binds `0.0.0.0`: any device on the same network opens the URL,
 runs the benches, and posts its results back to the host.
@@ -32,7 +33,7 @@ lan:   https://192.168.1.42:8787
 
 ## Using the page
 
-Two panels, each with a run button:
+Three panels, each with a run button:
 
 - **Groth16 proof** — proves every selected shape: one uncounted warm-up plus 5
   timed iterations. Appends one row per shape to `results.json`, including the
@@ -40,6 +41,53 @@ Two panels, each with a run button:
 - **Wallet scan throughput** — mints `N` synthetic notes at a configurable
   mine percentage, then scans them through the SDK worker pool. Reports hits,
   total, per-note and notes/s. Client-side only; nothing is posted.
+- **Wallet sync: FMD vs full** — runs a cold `syncWallet` twice over the same
+  scanner pool, once per note-feed strategy, and reports the two side by side.
+  Client-side only; nothing is posted.
+
+## Wallet sync panel
+
+The SDK offers two note feeds. `full` (`FmdNoteSource`, `/v1/notes`) pulls every
+note on chain; `matches` (`FmdMatchesNoteSource`, `/v1/matches`) pulls only what
+the server's FMD filter kept — the wallet's own notes plus false positives at
+`2^-γ`. Behind them the trial-decrypt path is identical, so the whole difference
+is rows fetched, rows parsed and rows decrypted. The panel measures that
+difference on a **cold sync**: a wallet restored from its key with an empty
+store, paging the whole chain. That is the case FMD is argued about, and the one
+that grows with the chain.
+
+### What is real and what is modelled
+
+**Real** — `syncWallet` itself, with its paging, cursors and checkpoints; pages
+built as JSON text and parsed back with the SDK's own hex codecs, so the fetch
+phase carries the response-handling cost that scales with rows; the
+`WorkerPoolScanner` trial-decrypting genuine ciphertexts; `NoteCache.addHits`
+dedupe. A run asserts `stoppedBy = exhausted` and that every own note was found,
+so a number can only come from a sync that actually completed. The scanner pool
+is warmed before timing, so neither strategy is charged for worker startup.
+
+**Modelled** — the chain and the link. Foreign notes are cycled from a pool of
+4096 rather than minted per row (trial-decrypt costs the same either way, and
+the pool stays larger than a page so no page compresses better than a real one),
+the FMD filter is a hash firing at `2^-γ` rather than a detection key, and each
+page waits `rtt + bytes / bandwidth` — over the *compressed* size, measured with
+`CompressionStream` off a real page, because hex JSON gzips around 2.3x and
+ignoring that would hand FMD a bandwidth win it has not earned.
+
+Server-side costs are out of scope on both sides: the indexer's FMD filter and a
+new subscription's backfill are the price `matches` pays off the client, and
+`backend/crates/common-crypto/benches/filter_batch.rs` measures them.
+
+### Controls
+
+Chain size, own notes, γ, page size, and a network profile. γ is clamped exactly as the server clamps it — to
+`FMD_SENDER_GAMMA` and to whatever still leaves 64 expected decoys — and the
+applied value is shown, so a small chain cannot claim a filter it would not be
+granted. The `ideal` profile drops the network term entirely and leaves the
+device's own decrypt and decode cost.
+
+`full` at a large chain size is genuinely slow: it is parsing and scanning every
+row. **Stop** aborts at the next page boundary.
 
 ## Reference results
 

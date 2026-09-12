@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Badge } from "./components/Badge";
 import { ProofBenchPanel } from "./components/ProofBenchPanel";
 import { ScanBenchPanel } from "./components/ScanBenchPanel";
+import { SyncBenchPanel } from "./components/SyncBenchPanel";
 import { deviceInfo } from "./lib/device";
 
 export function App() {
@@ -33,6 +34,7 @@ export function App() {
             <main>
                 <ProofBenchPanel selfUa={device.ua} />
                 <ScanBenchPanel />
+                <SyncBenchPanel />
             </main>
         </div>
     );
