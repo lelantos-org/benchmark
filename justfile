@@ -24,9 +24,13 @@ serve PORT="8787": install prepare
 preview PORT="8787": install prepare
     cd "{{BENCH}}" && npm run build && PORT={{PORT}} npm run preview
 
-# Typecheck (app + Node-side) and lint.
+# Typecheck (app, Node side, tests), lint and run the unit tests.
 check: install
     cd "{{BENCH}}" && npm run check
+
+# Unit tests only.
+test: install
+    cd "{{BENCH}}" && npm test
 
 # Lint only.
 lint: install

@@ -1,71 +1,66 @@
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-// Version of the installed circuit set, stamped into the artifact URLs.
-//
-// The SDK's persistent cache keys on the URL, so unversioned paths survive an
-// `npm install` and the origin's Cache API keeps serving the previous wasm and
-// zkey. Read directly from the file: the package's `exports` map has no
-// "./package.json" entry, so importing it fails.
-const { version: circuitsVersion } = JSON.parse(
-    readFileSync(
-        fileURLToPath(new URL("./node_modules/@lelantos-org/circuits/package.json", import.meta.url)),
-        "utf8",
-    ),
-) as { version: string };
-
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { defineConfig, type PreviewOptions } from "vite";
 
 import { benchApi } from "./server/bench-api.js";
 import { ensureSelfSignedCert } from "./server/cert.js";
+import { ISOLATION_HEADERS } from "./server/http.js";
 import { lanIPs } from "./server/lan.js";
 
 const root = fileURLToPath(new URL(".", import.meta.url));
-const PORT = parseInt(process.env.PORT ?? "8787", 10);
+
+function parsePort(raw: string | undefined, fallback: number): number {
+    if (raw === undefined || raw === "") return fallback;
+    const port = Number(raw);
+    if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error(`invalid PORT: ${raw}`);
+    return port;
+}
+
+/**
+ * Version of the installed circuit set, stamped into the artifact URLs.
+ *
+ * The SDK's persistent cache keys on the URL, so unversioned paths survive an
+ * `npm install` and the origin's Cache API keeps serving the previous wasm and
+ * zkey. Read directly from the file: the package's `exports` map has no
+ * "./package.json" entry, so importing it fails.
+ */
+function installedVersion(pkg: string): string {
+    const manifest = new URL(`./node_modules/${pkg}/package.json`, import.meta.url);
+    return (JSON.parse(readFileSync(manifest, "utf8")) as { version: string }).version;
+}
+
+const port = parsePort(process.env.PORT, 8787);
 
 // HTTPS is on by default: SharedArrayBuffer needs a secure context, which LAN
 // devices do not get over plain http. HTTPS=0 opts out for localhost work.
 const useHttps = process.env.HTTPS !== "0";
-const cert = useHttps ? ensureSelfSignedCert(resolve(root, ".certs")) : null;
+const cert = useHttps ? ensureSelfSignedCert(fileURLToPath(new URL("./.certs", import.meta.url))) : null;
 
-const https = cert
-    ? { key: readFileSync(cert.key), cert: readFileSync(cert.cert) }
-    : undefined;
-
-// Cross-origin isolation for the multi-threaded prover, applied to every
-// response Vite serves, including module workers.
-const headers = {
-    "Cross-Origin-Opener-Policy": "same-origin",
-    "Cross-Origin-Embedder-Policy": "require-corp",
-    "Cross-Origin-Resource-Policy": "same-origin",
+// Shared by `vite` and `vite preview`, so both serve identically.
+const serve: PreviewOptions = {
+    host: true, // bind 0.0.0.0 so LAN devices can reach the server
+    port,
+    strictPort: true,
+    https: cert ? { key: readFileSync(cert.key), cert: readFileSync(cert.cert) } : undefined,
+    headers: ISOLATION_HEADERS,
 };
 
-console.log(`bench: ${useHttps ? "https" : "http"}://localhost:${PORT}`);
-for (const ip of lanIPs()) console.log(`lan:   ${useHttps ? "https" : "http"}://${ip}:${PORT}`);
-if (useHttps) console.log("note: self-signed cert — phones must accept the warning once.");
-else console.log("note: HTTPS disabled — multi-thread prover will fall back off-LAN devices.");
+const scheme = useHttps ? "https" : "http";
+console.log(`bench: ${scheme}://localhost:${port}`);
+for (const ip of lanIPs()) console.log(`lan:   ${scheme}://${ip}:${port}`);
+console.log(useHttps
+    ? "note: self-signed cert — phones must accept the warning once."
+    : "note: HTTPS disabled — LAN devices get no SharedArrayBuffer and prove single-threaded.");
 
 export default defineConfig({
     define: {
-        __CIRCUITS_VERSION__: JSON.stringify(circuitsVersion),
+        __CIRCUITS_VERSION__: JSON.stringify(installedVersion("@lelantos-org/circuits")),
     },
     plugins: [react(), benchApi({ root })],
-    server: {
-        host: true,          // bind 0.0.0.0 so LAN devices can reach the server
-        port: PORT,
-        strictPort: true,
-        https,
-        headers,
-    },
-    preview: {
-        host: true,
-        port: PORT,
-        strictPort: true,
-        https,
-        headers,
-    },
+    server: serve,
+    preview: serve,
     worker: {
         format: "es",
     },

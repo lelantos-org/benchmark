@@ -6,14 +6,14 @@
     "type": "module",
     "description": "LAN Groth16 proof + wallet-scan bench (React + Vite).",
     "scripts": {
-        "prepare-input": "tsx prepare.ts",
+        "prepare-input": "tsx scripts/prepare-input.ts",
         "dev": "vite",
-        "serve": "vite",
         "build": "vite build",
         "preview": "vite preview",
         "typecheck": "tsc -b",
         "lint": "eslint .",
-        "check": "tsc -b && eslint ."
+        "test": "node --import tsx --test \"test/**/*.test.ts\"",
+        "check": "tsc -b && eslint . && npm test"
     },
     "devDependencies": {
         "@eslint/js": "^10.0.1",
@@ -35,5 +35,8 @@
         "@lelantos-org/sdk": "0.35.0",
         "react": "^19.2.8",
         "react-dom": "^19.2.8"
+    },
+    "engines": {
+        "node": ">=22"
     }
 }

@@ -1,7 +1,8 @@
-import type { RunState } from "../lib/run-state";
+import type { RunState } from "../hooks/useBenchRun";
+
+const TONE: Partial<Record<RunState, string>> = { error: "err", done: "ok" };
 
 export function StatusPill({ state, status }: { state: RunState; status: string }) {
     if (!status) return null;
-    const cls = state === "error" ? "err" : state === "done" ? "ok" : "";
-    return <span className={`status ${cls}`}>{status}</span>;
+    return <span className={`status ${TONE[state] ?? ""}`} role="status">{status}</span>;
 }

@@ -31,6 +31,21 @@ bench: https://localhost:8787
 lan:   https://192.168.1.42:8787
 ```
 
+## Layout
+
+| Path | Contents |
+|---|---|
+| `src/benches/{proof,scan,sync}/` | One folder per panel: component, hook, and the React-free measurement code |
+| `src/sdk/` | Thin adapters over `@lelantos-org/sdk`: artifact URLs and cache, workers, prover, scanner, log sink |
+| `src/notegen/` | Worker minting the synthetic notes the scan and sync benches consume |
+| `src/components/`, `src/hooks/`, `src/lib/` | Shared UI, run state machine, and pure helpers |
+| `shared/circuits.ts` | The circuit set, shared by the app, the server and the witness script |
+| `server/` | Vite plugin serving circuit artifacts, SDK wasm and the results log; dev TLS cert |
+| `scripts/prepare-input.ts` | Witness generator behind `just prepare` |
+| `test/` | Unit tests for the pure modules and the server helpers (`just test`) |
+
+`just check` typechecks, lints and runs the tests.
+
 ## Using the page
 
 Three panels, each with a run button:

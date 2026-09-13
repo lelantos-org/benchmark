@@ -3,8 +3,8 @@
 // independently.
 
 export interface TimeScale {
-    /** `"ms"` or `"s"`, chosen once for the whole axis. */
-    unit: string;
+    /** Chosen once for the whole axis. */
+    unit: "ms" | "s";
     /** Formats a value in the axis unit at label precision. */
     format: (ms: number) => string;
     /** As `format`, with trailing zeros trimmed for round ticks. */
@@ -65,7 +65,3 @@ export function truncate(label: string, gutterPx: number, perChar = 7): string {
     const max = Math.max(6, Math.floor((gutterPx - 14) / perChar));
     return label.length <= max ? label : label.slice(0, max - 1) + "…";
 }
-
-/** Constrains a centred overlay so it does not overflow either edge. */
-export const clamp = (value: number, min: number, max: number): number =>
-    Math.min(Math.max(value, min), Math.max(min, max));
