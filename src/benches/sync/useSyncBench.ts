@@ -3,7 +3,7 @@ import { useCallback, useRef, useState } from "react";
 import { useBenchRun, type BenchRun } from "../../hooks/useBenchRun";
 import { useScannerPool } from "../../hooks/useScannerPool";
 import { formatMB, formatMs } from "../../lib/format";
-import { requireInt } from "../../lib/math";
+import { requireInts } from "../../lib/math";
 import { mintPool, type NotePool } from "../../notegen/client";
 import { MAX_DETECTION_GAMMA, MIN_GAMMA, type NetworkProfile, STRATEGIES } from "./model";
 import { runSync, type SyncRunSummary, warmUp } from "./run";
@@ -53,10 +53,7 @@ const describe = (r: SyncRunSummary): string =>
     ` stoppedBy=${r.stoppedBy}`;
 
 function validate(params: SyncBenchParams): SyncBenchParams {
-    const checked = { ...params };
-    for (const key of Object.keys(LIMITS) as (keyof typeof LIMITS)[]) {
-        checked[key] = requireInt(key, params[key], LIMITS[key].min, LIMITS[key].max);
-    }
+    const checked = requireInts(params, LIMITS);
     if (checked.own > checked.total) {
         throw new Error(`own notes (${checked.own}) exceeds chain size (${checked.total})`);
     }

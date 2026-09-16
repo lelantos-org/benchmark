@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 
 import { barPath, niceTicks, timeScale, truncate } from "../src/lib/chart";
 import { formatMB, formatMsInt, formatWhen, plural } from "../src/lib/format";
-import { clamp, requireInt } from "../src/lib/math";
+import { clamp, requireInt, requireInts } from "../src/lib/math";
 import { median, stats } from "../src/lib/stats";
 
 describe("stats", () => {
@@ -74,5 +74,11 @@ describe("math", () => {
         assert.throws(() => requireInt("n", Number.NaN, 1, 10), /n must be an integer/);
         assert.throws(() => requireInt("n", 0, 1, 10));
         assert.throws(() => requireInt("n", 1.5, 1, 10));
+    });
+
+    it("validates every field a limits table names, leaving the rest", () => {
+        const limits = { a: { min: 1, max: 10 }, b: { min: 0, max: 1 } };
+        assert.deepEqual(requireInts({ a: 5, b: 1, extra: "x" }, limits), { a: 5, b: 1, extra: "x" });
+        assert.throws(() => requireInts({ a: 5, b: 2 }, limits), /b must be an integer in 0\.\.1/);
     });
 });

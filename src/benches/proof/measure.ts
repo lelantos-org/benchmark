@@ -67,8 +67,14 @@ export function progressLabel(p: ProofProgress): string {
     }
 }
 
+/**
+ * A row this session produced: unlike rows read back from `results.json`, its
+ * shape is one the installed circuits ship and every field is present.
+ */
+export type ShapeResult = BenchResult & Required<Pick<BenchResult, "warmupMs" | "cachedArtifacts">> & { shape: Shape };
+
 /** Builds the row a finished shape posts to `results.json`. */
-export function toResultRow(device: DeviceInfo, shape: Shape, run: ShapeMeasurement): BenchResult {
+export function toResultRow(device: DeviceInfo, shape: Shape, run: ShapeMeasurement): ShapeResult {
     const { mean, median, min, max } = stats(run.timesMs);
     return {
         ...device,

@@ -3,11 +3,15 @@ import { useCallback, useState } from "react";
 import { useBenchRun, type BenchRun } from "../../hooks/useBenchRun";
 import { useScannerPool } from "../../hooks/useScannerPool";
 import { formatMs } from "../../lib/format";
-import { requireInt } from "../../lib/math";
+import { requireInts } from "../../lib/math";
 import { timed } from "../../lib/timing";
 import { mintFeed } from "../../notegen/client";
 
-export const MAX_NOTES = 100_000;
+/** Input bounds; the panel's fields and the run's validation both read these. */
+export const LIMITS = {
+    notes: { min: 100, max: 100_000 },
+    minePercent: { min: 0, max: 100 },
+} as const;
 
 export interface ScanParams {
     notes: number;
@@ -38,8 +42,7 @@ export function useScanBench(): ScanBench {
 
     const run = useCallback((params: ScanParams) => start(async () => {
         setSummary(null);
-        const n = requireInt("notes", params.notes, 1, MAX_NOTES);
-        const minePercent = requireInt("mine %", params.minePercent, 0, 100);
+        const { notes: n, minePercent } = requireInts(params, LIMITS);
 
         setStatus("generating notes…");
         log(`generating ${n} synthetic notes (${minePercent}% mine)…`);

@@ -19,6 +19,6 @@ export function createScanner(size: number): WorkerPoolScanner {
     return new WorkerPoolScanner({
         factory: createScannerWorker,
         size,
-        wasm: { ...JUBJUB_WASM },
+        wasm: JUBJUB_WASM,
     });
 }

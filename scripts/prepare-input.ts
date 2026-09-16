@@ -29,18 +29,18 @@ import {
 } from "@lelantos-org/sdk/internal";
 import {
     buildNoteCommitment,
+    buildOutputAux,
     buildRho,
     derivePk,
     type Field,
-    Jubjub,
-    MerkleTree,
-    Poseidon,
-    TAG_LEAF,
-    buildOutputAux,
     fmdClueKeyFromRoot,
     fmdExpandFlagKey,
+    Jubjub,
+    MerkleTree,
     type Note,
     type OutputAux,
+    Poseidon,
+    TAG_LEAF,
 } from "@lelantos-org/sdk/primitives";
 import { type AuxOutput, auxDigest } from "@lelantos-org/sdk/protocol";
 

@@ -13,3 +13,24 @@ export function requireInt(name: string, value: number, min: number, max: number
     }
     return value;
 }
+
+export interface IntRange {
+    min: number;
+    max: number;
+}
+
+/**
+ * {@link requireInt} over every field `limits` names, keyed by field name. One
+ * table drives both the form's `min`/`max` attributes and this check, so the two
+ * cannot disagree.
+ */
+export function requireInts<T extends Record<keyof L, number>, L extends Record<string, IntRange>>(
+    params: T,
+    limits: L,
+): T {
+    const checked = { ...params };
+    for (const key of Object.keys(limits) as (keyof L & string)[]) {
+        (checked as Record<keyof L, number>)[key] = requireInt(key, params[key], limits[key].min, limits[key].max);
+    }
+    return checked;
+}

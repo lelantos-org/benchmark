@@ -25,6 +25,8 @@ const PAD_TOP = 6;
 const AXIS_BAND = 26;      // space for the x tick labels inside the SVG
 const VALUE_GUTTER = 60;   // space for the value label past the longest bar
 const END_RADIUS = 4;
+const LABEL_GUTTER = { min: 84, max: 150, share: 0.28 }; // device-name column, as a share of width
+const MIN_PLOT_W = 60;
 const TOOLTIP_INSET = 80;  // keeps a centred tooltip clear of either edge
 
 /** Colour is keyed to the shape, not to its position in the sorted data. */
@@ -55,8 +57,8 @@ export function DeviceChart({ rows, selfUa }: { rows: readonly BenchResult[]; se
 
     const groupH = shapes.length * BAR_H + (shapes.length - 1) * BAR_GAP + GROUP_PAD;
     const height = PAD_TOP + devices.length * groupH + AXIS_BAND;
-    const labelGutter = Math.max(84, Math.min(150, width * 0.28));
-    const plotW = Math.max(60, width - labelGutter - VALUE_GUTTER);
+    const labelGutter = clamp(width * LABEL_GUTTER.share, LABEL_GUTTER.min, LABEL_GUTTER.max);
+    const plotW = Math.max(MIN_PLOT_W, width - labelGutter - VALUE_GUTTER);
 
     const peak = Math.max(...devices.flatMap(d => shapes.map(s => d.byShape[s]?.medianMeanMs ?? 0)));
     const ticks = niceTicks(peak);

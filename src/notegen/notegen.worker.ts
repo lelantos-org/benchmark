@@ -2,19 +2,19 @@
 // to our ivk and the rest to a stranger's, so trial-decrypt sees the same mix of
 // hits and misses as a real wallet sync.
 
+import { encodeInput, encodeNotePayload, type WireScanInput } from "@lelantos-org/sdk/internal";
 import {
     BABYJUB_SUBGROUP_ORDER,
     buildNoteCommitment,
     configureJubjubWasm,
     derivePkFromIvk,
+    encryptNote,
     type Field,
     Jubjub,
     type Point,
     Poseidon,
-    encryptNote,
     withClueBitsPrefix,
 } from "@lelantos-org/sdk/primitives";
-import { encodeInput, encodeNotePayload, type WireScanInput } from "@lelantos-org/sdk/internal";
 
 import { errMsg } from "../lib/errors";
 import { JUBJUB_WASM } from "../sdk/artifacts";

@@ -89,14 +89,12 @@ export class SyntheticNoteSource implements NoteSource {
     readonly tally: FeedTally = { rows: 0, wireBytes: 0, rawBytes: 0, pages: 0, transferMs: 0 };
 
     private readonly ownAt: Map<number, number>;
-    private readonly total: number;
     private readonly backfilledThrough: number;
     /** Measured once from a real page; see `gzipRatio`. */
     private ratio: Promise<number> | null = null;
 
     constructor(private readonly opts: SyntheticFeedOpts) {
         this.ownAt = new Map(opts.own.map((id, i) => [id, i]));
-        this.total = opts.total;
         this.backfilledThrough = opts.backfilledThrough ?? opts.total;
     }
 
@@ -106,7 +104,7 @@ export class SyntheticNoteSource implements NoteSource {
 
         const rows: string[] = [];
         let hi = after;
-        for (let id = after + 1; id <= this.total && rows.length < limit; id++) {
+        for (let id = after + 1; id <= this.opts.total && rows.length < limit; id++) {
             if (!this.serves(id)) continue;
             rows.push(rowText(id, this.tail(id), this.opts.kind));
             hi = id;

@@ -5,7 +5,7 @@ import { Panel } from "../../components/Panel";
 import { StatTiles, type Stat } from "../../components/StatTiles";
 import { StatusPill } from "../../components/StatusPill";
 import { formatCount, formatMsInt } from "../../lib/format";
-import { MAX_NOTES, useScanBench, type ScanSummary } from "./useScanBench";
+import { LIMITS, type ScanSummary, useScanBench } from "./useScanBench";
 
 export function ScanBenchPanel() {
     const { state, status, busy, poolSize, summary, logHandle, run } = useScanBench();
@@ -19,9 +19,9 @@ export function ScanBenchPanel() {
                 <button className="primary" onClick={() => void run({ notes, minePercent })} disabled={busy}>
                     {busy ? "Scanning…" : "Run scan benchmark"}
                 </button>
-                <NumberField label="notes" wide min={100} max={MAX_NOTES} value={notes}
+                <NumberField label="notes" wide {...LIMITS.notes} value={notes}
                     disabled={busy} onChange={setNotes} />
-                <NumberField label="mine %" min={0} max={100} value={minePercent}
+                <NumberField label="mine %" {...LIMITS.minePercent} value={minePercent}
                     disabled={busy} onChange={setMinePercent} />
                 <StatusPill state={state} status={status} />
             </div>

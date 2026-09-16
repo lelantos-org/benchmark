@@ -10,7 +10,8 @@ import { formatMsInt } from "../../lib/format";
 import { clearArtifactCache } from "../../sdk/artifact-cache";
 import { DeviceChart } from "./DeviceChart";
 import { ResultsTable } from "./ResultsTable";
-import { useProofBench, type ShapeSummary } from "./useProofBench";
+import type { ShapeResult } from "./measure";
+import { useProofBench } from "./useProofBench";
 
 export function ProofBenchPanel({ device }: { device: DeviceInfo }) {
     const { state, status, busy, progress, summary, results, logHandle, run } = useProofBench(device);
@@ -78,13 +79,13 @@ export function ProofBenchPanel({ device }: { device: DeviceInfo }) {
     );
 }
 
-function shapeTiles(run: ShapeSummary): Stat[] {
+function shapeTiles(run: ShapeResult): Stat[] {
     const ms = (label: string, value: number): Stat => ({ label, value: formatMsInt(value), unit: "ms" });
     return [
-        ms("mean", run.mean),
-        ms("median", run.median),
-        ms("min", run.min),
-        ms("max", run.max),
+        ms("mean", run.meanMs),
+        ms("median", run.medianMs),
+        ms("min", run.minMs),
+        ms("max", run.maxMs),
         ms(run.cachedArtifacts ? "prepare (warm)" : "prepare (cold)", run.prepareMs),
     ];
 }

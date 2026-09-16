@@ -4,23 +4,15 @@ import type { Shape } from "../../../shared/circuits";
 import { useBenchRun, type BenchRun } from "../../hooks/useBenchRun";
 import type { DeviceInfo } from "../../lib/device";
 import { errMsg } from "../../lib/errors";
-import { stats, type Stats } from "../../lib/stats";
+import { formatMs } from "../../lib/format";
 import { type BenchResult, fetchResults, postResult } from "./api";
-import { measureShape, progressFraction, progressLabel, toResultRow } from "./measure";
-
-/** A finished shape's contribution to the summary tiles. */
-export interface ShapeSummary extends Stats {
-    shape: Shape;
-    prepareMs: number;
-    /** Qualifies `prepareMs`: a warm prepare skips the artifact download. */
-    cachedArtifacts: boolean;
-}
+import { measureShape, progressFraction, progressLabel, type ShapeResult, toResultRow } from "./measure";
 
 export interface ProofBench extends Pick<BenchRun, "state" | "status" | "busy" | "logHandle"> {
     /** 0–1 across every shape of the current run. */
     progress: number;
     /** Shapes completed by the most recent run, in run order. */
-    summary: ShapeSummary[];
+    summary: ShapeResult[];
     results: BenchResult[];
     /** Proves each shape in turn, posting one result row per shape. */
     run: (shapes: readonly Shape[]) => Promise<void>;
@@ -31,7 +23,7 @@ export function useProofBench(device: DeviceInfo): ProofBench {
     const { log } = logHandle;
     const [results, setResults] = useState<BenchResult[]>([]);
     const [progress, setProgress] = useState(0);
-    const [summary, setSummary] = useState<ShapeSummary[]>([]);
+    const [summary, setSummary] = useState<ShapeResult[]>([]);
 
     // A failed load leaves the table as it was: it must not fail a run whose
     // rows were already posted.
@@ -63,11 +55,14 @@ export function useProofBench(device: DeviceInfo): ProofBench {
                 },
             }, signal);
 
-            const s = stats(measured.timesMs);
-            log(`${shape}: mean=${s.mean.toFixed(0)} median=${s.median.toFixed(0)} min=${s.min.toFixed(0)} max=${s.max.toFixed(0)}`);
-            setSummary(prev => [...prev, { shape, prepareMs: measured.prepareMs, cachedArtifacts: measured.cachedArtifacts, ...s }]);
+            const row = toResultRow(device, shape, measured);
+            log(
+                `${shape}: mean=${formatMs(row.meanMs)} median=${formatMs(row.medianMs)}` +
+                ` min=${formatMs(row.minMs)} max=${formatMs(row.maxMs)}`,
+            );
+            setSummary(prev => [...prev, row]);
 
-            await postResult(toResultRow(device, shape, measured));
+            await postResult(row);
         }
 
         await fetchResults().then(setResults, onLoadError);
