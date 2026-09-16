@@ -14,8 +14,9 @@
 // decoding a page is what remains, and both are charged to the fetch phase
 // where `FmdClient.listNotes` puts them.
 
-import { bytesToHex, hexBytes, hexToBigint } from "@lelantos-org/sdk/core";
-import type { ScanInput } from "@lelantos-org/sdk/sync";
+import type { ScanInput } from "@lelantos-org/sdk/advanced";
+import { bytesToHex, hexToBigint } from "@lelantos-org/sdk/primitives";
+import { hexBytes } from "@lelantos-org/sdk/services";
 
 import type { SyncStrategyKind } from "./model";
 

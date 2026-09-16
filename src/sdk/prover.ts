@@ -20,6 +20,6 @@ export function createProver(shape: Shape): WorkerProver {
     const { wasmPath, zkeyPath } = artifactsFor(shape);
     return new WorkerProver({
         worker: createProverWorker(),
-        paths: { wasmPath, zkeyPath },
+        artifacts: { circuit: wasmPath, zkey: zkeyPath },
     });
 }

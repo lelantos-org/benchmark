@@ -1,7 +1,7 @@
 // Scan path under test: the SDK's `WorkerPoolScanner` over its shipped scanner
 // worker, the same path a wallet uses to sync.
 
-import { WorkerPoolScanner } from "@lelantos-org/sdk/sync";
+import { WorkerPoolScanner } from "@lelantos-org/sdk/advanced";
 
 import { JUBJUB_WASM } from "./artifacts";
 import { createScannerWorker } from "./workers";

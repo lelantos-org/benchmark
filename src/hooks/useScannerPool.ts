@@ -1,4 +1,4 @@
-import type { WorkerPoolScanner } from "@lelantos-org/sdk/sync";
+import type { WorkerPoolScanner } from "@lelantos-org/sdk/advanced";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { createScanner, defaultPoolSize } from "../sdk/scanner";

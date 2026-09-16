@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import type { ScanInput } from "@lelantos-org/sdk/sync";
+import type { ScanInput } from "@lelantos-org/sdk/advanced";
 
 import { SyntheticNoteSource, toWirePool } from "../src/benches/sync/feed";
 import {

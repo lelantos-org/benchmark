@@ -1,4 +1,4 @@
-import { requestPersistentStorage } from "@lelantos-org/sdk/core";
+import { requestPersistentStorage } from "@lelantos-org/sdk/advanced";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 

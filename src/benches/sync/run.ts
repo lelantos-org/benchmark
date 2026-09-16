@@ -10,15 +10,14 @@
 // and the one that grows with the chain rather than with time since the last
 // poll.
 
-import type { Jubjub } from "@lelantos-org/sdk/crypto";
-import type { Scanner } from "@lelantos-org/sdk/sync";
+import { InMemoryNoteStore, type Scanner } from "@lelantos-org/sdk/advanced";
 import {
-    InMemoryNoteStore,
     NoteCache,
-    type SyncProgress,
+    type NotesSyncProgress,
     type SyncResult,
     syncWallet,
-} from "@lelantos-org/sdk/wallet";
+} from "@lelantos-org/sdk/internal";
+import type { Jubjub } from "@lelantos-org/sdk/primitives";
 
 import type { NotePool } from "../../notegen/client";
 import { SyntheticNoteSource, toWirePool } from "./feed";
@@ -107,7 +106,7 @@ export interface SyncRunSummary {
 }
 
 /** Phases `syncWallet` reports, in the order it reports them. */
-type Phase = SyncProgress["phase"];
+type Phase = NotesSyncProgress["phase"];
 
 /**
  * Splits wall clock by `syncWallet`'s own progress callbacks.

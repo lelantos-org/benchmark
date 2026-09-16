@@ -11,9 +11,10 @@ import {
     Jubjub,
     type Point,
     Poseidon,
-} from "@lelantos-org/sdk/crypto";
-import { encodeNotePayload, encryptNote, withClueBitsPrefix } from "@lelantos-org/sdk/notes";
-import { encodeInput, type WireScanInput } from "@lelantos-org/sdk/sync";
+    encryptNote,
+    withClueBitsPrefix,
+} from "@lelantos-org/sdk/primitives";
+import { encodeInput, encodeNotePayload, type WireScanInput } from "@lelantos-org/sdk/internal";
 
 import { errMsg } from "../lib/errors";
 import { JUBJUB_WASM } from "../sdk/artifacts";

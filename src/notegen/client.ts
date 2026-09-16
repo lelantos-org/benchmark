@@ -1,6 +1,7 @@
 // Main-thread client for the note generator worker.
 
-import { decodeInput, type ScanInput } from "@lelantos-org/sdk/sync";
+import type { ScanInput } from "@lelantos-org/sdk/advanced";
+import { decodeInput } from "@lelantos-org/sdk/internal";
 
 import type { NotegenRequest, NotegenResponse } from "./protocol";
 

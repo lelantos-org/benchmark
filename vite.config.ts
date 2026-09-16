@@ -89,9 +89,9 @@ export default defineConfig({
         // mid-scan, after the pool has reported itself ready.
         include: [
             "@lelantos-org/sdk",
-            "@lelantos-org/sdk/crypto",
-            "@lelantos-org/sdk/notes",
-            "@lelantos-org/sdk/sync",
+            "@lelantos-org/sdk/advanced",
+            "@lelantos-org/sdk/internal",
+            "@lelantos-org/sdk/primitives",
             // Converting these CommonJS modules to ESM here fixes the binding
             // for every importer, prebundled or not. The SDK uses arities 1..8
             // (`sdk/crypto/poseidon.ts`).
@@ -99,6 +99,6 @@ export default defineConfig({
         ],
         // The rayon prover package is fetched from /wasm/* at runtime and must
         // keep its own import.meta.url, or sub-worker spawning breaks.
-        exclude: ["@lelantos-org/sdk/wasm-prover"],
+        exclude: ["@lelantos-org/sdk/wasm/prover"],
     },
 });

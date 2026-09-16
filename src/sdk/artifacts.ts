@@ -10,7 +10,7 @@ import { artifactNames, type Shape } from "../../shared/circuits";
  * The jubjub package, referenced as served files rather than bundler assets:
  * the SDK's scanner worker resolves `jubjubModuleUrl` with a runtime `import()`,
  * and the wasm-pack glue then fetches its `_bg.wasm` neighbour relative to that
- * URL. Shaped as the `WireWasmConfig` `@lelantos-org/sdk/scanner-worker` takes.
+ * URL. Shaped as the `WireWasmConfig` `@lelantos-org/sdk/workers/scanner` takes.
  */
 export const JUBJUB_WASM = {
     jubjubModuleUrl: "/wasm/jubjub/pkg/jubjub_wasm.js",

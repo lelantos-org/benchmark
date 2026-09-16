@@ -11,7 +11,7 @@
 // transfer, then parse and decode it with the SDK's codecs. What it stands in
 // for: the chain, the filter, and the link — all in `model.ts`.
 
-import type { ListNotesOpts, NotePage, NoteSource } from "@lelantos-org/sdk/wallet";
+import type { ListNotesOpts, NotePage, NoteSource } from "@lelantos-org/sdk/advanced";
 
 import type { NotePool } from "../../notegen/client";
 import { gzipRatio, isFalsePositive, type NetworkProfile, type SyncStrategyKind, transferMs } from "./model";

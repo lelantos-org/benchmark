@@ -26,7 +26,7 @@ import {
     flatten,
     toCircomInput,
     toSpentNoteFromPath,
-} from "@lelantos-org/sdk/circuit";
+} from "@lelantos-org/sdk/internal";
 import {
     buildNoteCommitment,
     buildRho,
@@ -36,9 +36,12 @@ import {
     MerkleTree,
     Poseidon,
     TAG_LEAF,
-} from "@lelantos-org/sdk/crypto";
-import { fmdClueKeyFromRoot, fmdExpandFlagKey } from "@lelantos-org/sdk/fmd";
-import { buildOutputAux, type Note, type OutputAux } from "@lelantos-org/sdk/notes";
+    buildOutputAux,
+    fmdClueKeyFromRoot,
+    fmdExpandFlagKey,
+    type Note,
+    type OutputAux,
+} from "@lelantos-org/sdk/primitives";
 import { type AuxOutput, auxDigest } from "@lelantos-org/sdk/protocol";
 
 import { artifactNames, CIRCUITS, type Circuit } from "../shared/circuits.js";

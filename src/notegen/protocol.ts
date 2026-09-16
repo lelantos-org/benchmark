@@ -3,7 +3,7 @@
 // it runs off the main thread so the UI stays responsive while minting 10k+
 // notes.
 
-import type { WireScanInput } from "@lelantos-org/sdk/sync";
+import type { WireScanInput } from "@lelantos-org/sdk/internal";
 
 export type NotegenRequest =
     /** Flat feed for the scan bench: `n` notes, `mineFrac` of them ours. */

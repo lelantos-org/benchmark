@@ -115,7 +115,7 @@ function mix32(x: number): number {
  * than redrawn per request. A hash of the id reproduces both properties for
  * nothing. The cost of the real test is not modelled because it is not the
  * client's to pay — that is the indexer's, and
- * `backend/crates/common-crypto/benches/filter_batch.rs` measures it.
+ * `backend/crates/crypto/benches/filter_batch.rs` measures it.
  */
 export const isFalsePositive = (id: number, gamma: number): boolean =>
     (mix32(id) & ((1 << gamma) - 1)) === 0;

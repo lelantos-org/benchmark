@@ -2,7 +2,7 @@
 // sink exposes rayon bring-up, artifact fetches and per-stage timings from
 // inside the SDK.
 
-import { configureLogging, type LogRecord } from "@lelantos-org/sdk/log";
+import { configureLogging, type LogRecord } from "@lelantos-org/sdk";
 
 export type LogListener = (line: string) => void;
 

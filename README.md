@@ -91,7 +91,7 @@ ignoring that would hand FMD a bandwidth win it has not earned.
 
 Server-side costs are out of scope on both sides: the indexer's FMD filter and a
 new subscription's backfill are the price `matches` pays off the client, and
-`backend/crates/common-crypto/benches/filter_batch.rs` measures them.
+`backend/crates/crypto/benches/filter_batch.rs` measures them.
 
 ### Controls
 
