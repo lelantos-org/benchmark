@@ -32,7 +32,7 @@
     },
     "dependencies": {
         "@lelantos-org/circuits": "0.16.0",
-        "@lelantos-org/sdk": "0.39.0",
+        "@lelantos-org/sdk": "0.39.1",
         "react": "^19.2.8",
         "react-dom": "^19.2.8"
     },
