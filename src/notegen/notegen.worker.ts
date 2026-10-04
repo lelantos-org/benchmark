@@ -6,13 +6,12 @@ import { encodeInput, encodeNotePayload, type WireScanInput } from "@lelantos-or
 import {
     BABYJUB_SUBGROUP_ORDER,
     buildNoteCommitment,
+    buildSpendingKey,
     configureJubjubWasm,
-    derivePkFromIvk,
     encryptNote,
-    type Field,
     Jubjub,
-    type Point,
     Poseidon,
+    type SpendingKey,
     withClueBitsPrefix,
 } from "@lelantos-org/sdk/primitives";
 
@@ -33,8 +32,8 @@ const ctx = self as unknown as DedicatedWorkerGlobalScope;
  * Fixed seeds. The feed only needs to be deterministic and to split into
  * decryptable and non-decryptable notes; none of this is security-sensitive.
  */
-const MY_IVK_SEED = 1234n;
-const STRANGER_IVK_SEED = 9999n;
+const MY_NSK = 1234n;
+const STRANGER_NSK = 9999n;
 /** 2^64/φ, the Fibonacci-hashing multiplier; spreads esk across the run. */
 const GOLDEN_RATIO_64 = 0x9e3779b97f4a7c15n;
 
@@ -42,19 +41,15 @@ const NOTE_ASSET = 1n;
 // Offsets keep the note fields distinct per index; the values are arbitrary.
 const RHO_OFFSET = 1000n;
 const RCM_OFFSET = 2000n;
-const RCV_DEP_OFFSET = 3000n;
 
 /**
- * `pkD` is the Jubjub point the note is encrypted to; `pk` is the Poseidon field
- * the commitment binds. Both derive from the same ivk and must agree: the
- * scanner recomputes the commitment from the decrypted payload and drops any
- * note whose `cm` does not match.
+ * `pk_d` is the Jubjub point the note is encrypted to; `pk` is the Poseidon field
+ * the commitment binds, under the account's default diversifier. Both derive
+ * from the same ivk and must agree: the scanner recomputes the commitment from
+ * the decrypted payload and its own default `pk`, and drops any note whose `cm`
+ * does not match.
  */
-interface Identity {
-    ivk: Field;
-    pkD: Point;
-    pk: Field;
-}
+type Identity = Pick<SpendingKey, "ivk" | "pk_d" | "pk">;
 
 interface Minter {
     me: Identity;
@@ -66,11 +61,6 @@ interface Minter {
 async function createMinter(): Promise<Minter> {
     const [J, P] = await Promise.all([Jubjub.build(), Poseidon.build()]);
 
-    const identity = (seed: bigint): Identity => {
-        const ivk = seed % BABYJUB_SUBGROUP_ORDER || 1n;
-        return { ivk, pkD: J.mulPointEscalar(J.base8, ivk), pk: derivePkFromIvk(P, ivk) };
-    };
-
     const note = (to: Identity, i: number): WireScanInput => {
         const n = BigInt(i);
         const payload = {
@@ -78,11 +68,10 @@ async function createMinter(): Promise<Minter> {
             value: n + 1n,
             rho: n + RHO_OFFSET,
             rcm: n + RCM_OFFSET,
-            rcvDep: n + RCV_DEP_OFFSET,
         };
         const enc = encryptNote({
             J,
-            recipientPkD: to.pkD,
+            recipientPkD: to.pk_d,
             esk: (BigInt(i + 1) * GOLDEN_RATIO_64 + 1n) % BABYJUB_SUBGROUP_ORDER || 1n,
             plaintext: encodeNotePayload(payload),
         });
@@ -100,7 +89,11 @@ async function createMinter(): Promise<Minter> {
         });
     };
 
-    return { me: identity(MY_IVK_SEED), stranger: identity(STRANGER_IVK_SEED), note };
+    return {
+        me: buildSpendingKey(P, J, MY_NSK),
+        stranger: buildSpendingKey(P, J, STRANGER_NSK),
+        note,
+    };
 }
 
 const buffersOf = (inputs: WireScanInput[]): Transferable[] =>
