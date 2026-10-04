@@ -1,6 +1,6 @@
 # MASP LAN Benchmark
 
-Measures three SDK workloads on real devices across a LAN. All drive the code
+Measures four SDK workloads on real devices across a LAN. All drive the code
 `@lelantos-org/sdk` ships to wallets — there is no bench-local reimplementation —
 so the timings reflect what a wallet would actually see.
 
@@ -9,6 +9,7 @@ so the timings reflect what a wallet would actually see.
 | Groth16 proving | `WorkerProver` over `@lelantos-org/sdk/prover-worker` — ark-groth16 in wasm, `wasm-bindgen-rayon` thread pool | 4x6 from `@lelantos-org/circuits` |
 | Wallet scan throughput | `WorkerPoolScanner` over `@lelantos-org/sdk/scanner-worker` — trial-decrypt via `WasmJubjub` | Synthetic note feed, minted in a bench-owned worker outside the timed window |
 | Wallet sync: FMD vs full | `syncWallet` cold — the real paging loop, cursor, checkpointing and scanner pool | Synthetic `NoteSource` over a minted note pool; the link is modelled, the crypto is not |
+| Merkle tree rebuild | `TreeStore` — chunk paging, `MerkleTree` inserts, Poseidon wasm on the main thread | Synthetic `CommitmentFeed` of full-width field elements, built outside the timed window |
 
 The dev server binds `0.0.0.0`: any device on the same network opens the URL,
 runs the benches, and posts its results back to the host.
@@ -35,8 +36,8 @@ lan:   https://192.168.1.42:8787
 
 | Path | Contents |
 |---|---|
-| `src/benches/{proof,scan,sync}/` | One folder per panel: component, hook, and the React-free measurement code |
-| `src/sdk/` | Thin adapters over `@lelantos-org/sdk`: artifact URLs and cache, workers, prover, scanner, log sink |
+| `src/benches/{proof,scan,sync,tree}/` | One folder per panel: component, hook, and the React-free measurement code |
+| `src/sdk/` | Thin adapters over `@lelantos-org/sdk`: artifact URLs and cache, workers, prover, scanner, poseidon, log sink |
 | `src/notegen/` | Worker minting the synthetic notes the scan and sync benches consume |
 | `src/components/`, `src/hooks/`, `src/lib/` | Shared UI, run state machine, and pure helpers |
 | `shared/circuits.ts` | The circuit set, shared by the app, the server and the witness script |
@@ -48,7 +49,7 @@ lan:   https://192.168.1.42:8787
 
 ## Using the page
 
-Three panels, each with a run button:
+Four panels, each with a run button:
 
 - **Groth16 proof** — proves every selected shape: one uncounted warm-up plus 5
   timed iterations. Appends one row per shape to `results.json`, including the
@@ -58,6 +59,9 @@ Three panels, each with a run button:
   total, per-note and notes/s. Client-side only; nothing is posted.
 - **Wallet sync: FMD vs full** — runs a cold `syncWallet` twice over the same
   scanner pool, once per note-feed strategy, and reports the two side by side.
+  Client-side only; nothing is posted.
+- **Merkle tree rebuild** — fills a `TreeStore` from leaf 0, then restores it
+  from what it would have persisted, with and without the internal nodes.
   Client-side only; nothing is posted.
 
 ## Wallet sync panel
@@ -103,6 +107,48 @@ device's own decrypt and decode cost.
 
 `full` at a large chain size is genuinely slow: it is parsing and scanning every
 row. **Stop** aborts at the next page boundary.
+
+## Merkle tree panel
+
+The wallet keeps the whole commitment tree locally, so that asking for a Merkle
+path does not reveal which note is being spent. The panel times the three ways
+it comes to hold that tree:
+
+| Tile | What runs | When a wallet pays it |
+|---|---|---|
+| cold sync | `sync()` from leaf 0, then `root()` | No stored tree, or `reset()` after the tree diverged from the chain |
+| restore, leaves only | `loadState` without `nodes`, then `root()` | A `TreePersistence` that does not store `TreeStoreState.nodes` |
+| restore, with nodes | `loadState` with `nodes`, then `root()` | Every ordinary page load |
+
+The first two hash every internal node — about a third of the leaf count, the
+*hashes* tile — and *per hash* is the leaves-only restore divided by that. The
+third should hash nothing; what is left is the cost of re-inserting the saved
+nodes.
+
+The log line splits cold sync into `sync` and `root`, because which of the two
+does the hashing depends on the SDK version: 0.42.0 only inserts leaves in
+`sync()` and hashes the lot in the first `root()`, one uninterrupted block on
+the main thread, while later versions hash each chunk as it arrives and release
+the event loop in between. The total is comparable across versions; the split
+shows how long the page is frozen.
+
+**Real** — `TreeStore` and everything under it: `pageChunks`, the contiguity
+check, `MerkleTree.bulkInsert`, the node cache, and `Poseidon` on the wasm
+backend. It runs on the main thread because that is where a wallet runs it. A
+run asserts that every leaf was synced and that all three trees agree on the
+root.
+
+**Modelled** — the feed. Leaves are full-width field elements rather than real
+commitments, which Poseidon cannot tell apart, and chunks are handed over
+already decoded with no latency. Fetching and parsing `/v1/commitments` is
+therefore not in any number here.
+
+The badge next to the result names the Poseidon backend. `Poseidon.build()`
+falls back to JS tables when the wasm fails to load, without an error; a run
+showing *JS fallback* measured that instead.
+
+Depth defaults to the benched circuit's. It bounds capacity at `4^depth` and
+adds one hash per level above the last full one, so it barely moves the times.
 
 ## Reference results
 

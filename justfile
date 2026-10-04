@@ -36,7 +36,7 @@ test: install
 lint: install
     cd "{{BENCH}}" && npm run lint
 
-# `package.json` pins a published SDK (currently 0.42.0), so the bench normally measures
+# `package.json` pins a published SDK (currently 0.43.0), so the bench normally measures
 # whatever npm last resolved, not the local prover. Anything built under
 # `sdk/wasm/*/pkg` is invisible to it until this runs.
 #

@@ -19,6 +19,12 @@ export const JUBJUB_WASM: Readonly<WireWasmConfig> = {
     jubjubWasmUrl: "/wasm/jubjub/pkg/jubjub_wasm_bg.wasm",
 };
 
+/** The poseidon package, served the same way and loaded on the main thread. */
+export const POSEIDON_WASM = {
+    moduleUrl: "/wasm/poseidon/pkg/poseidon_wasm.js",
+    wasmUrl: "/wasm/poseidon/pkg/poseidon_wasm_bg.wasm",
+} as const;
+
 export interface CircuitArtifacts {
     /** Absolute — see {@link artifactsFor}. */
     wasmPath: string;

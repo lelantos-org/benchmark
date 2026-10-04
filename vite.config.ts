@@ -73,9 +73,9 @@ export default defineConfig({
     optimizeDeps: {
         // The SDK must go through the dep optimizer: it imports CommonJS
         // (poseidon-lite), whose named exports a raw ESM copy cannot bind. Its
-        // wasm-pack glue is safe to prebundle because both wasm loaders are
-        // injected explicitly (configureJubjubWasm / configureProverWasm) rather
-        // than resolved from import.meta.url.
+        // wasm-pack glue is safe to prebundle because the wasm loaders are
+        // injected explicitly (configureJubjubWasm / configureProverWasm /
+        // configurePoseidonWasm) rather than resolved from import.meta.url.
         //
         // Every subpath a worker imports must be listed explicitly. The optimizer
         // crawls the HTML entry, so it finds what the main thread reaches; a
