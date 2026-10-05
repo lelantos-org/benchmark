@@ -15,6 +15,7 @@ import {
     defaultDiversifier,
     deriveOutgoingKey,
     type DiversifiedKeys,
+    encodeMemo,
     encryptNote,
     expandSeed,
     FMD_DEFAULT_GAMMA,
@@ -37,6 +38,8 @@ const SENDER_NSK = 4321n;
 const CHAIN_ID = 31337n;
 
 const NOTE_ASSET = 1n;
+/** No note carries a memo: the field is all zero. */
+const NO_MEMO = encodeMemo(undefined);
 // Keeps rho distinct per index; the value is arbitrary.
 const RHO_OFFSET = 1000n;
 
@@ -103,7 +106,14 @@ export function createMinter(J: Jubjub, P: Poseidon): Minter {
             gD: stranger.g_d,
             recipientPkD: stranger.pk_d,
             esk,
-            plaintext: encodeNotePayload({ asset: NOTE_ASSET, value, rho, rseed, d: stranger.d }),
+            plaintext: encodeNotePayload({
+                asset: NOTE_ASSET,
+                value,
+                rho,
+                rseed,
+                d: stranger.d,
+                memo: NO_MEMO,
+            }),
         });
         const clueBits = toLeBytes(rcm & CLUE_BITS_MASK, CLUE_BITS_BYTES);
         return {
