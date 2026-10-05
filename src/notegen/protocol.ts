@@ -1,24 +1,20 @@
-// Protocol for the bench-owned worker that mints the synthetic note feeds used
+// Protocol for the bench-owned workers that mint the synthetic note feeds used
 // by the scan and sync benches. Generation is not part of either measured path;
 // it runs off the main thread so the UI stays responsive while minting 10k+
-// notes.
+// notes, and is split across workers because each note is independent.
 
 import type { WireScanInput } from "@lelantos-org/sdk/internal";
 
-export type NotegenRequest =
-    /** Flat feed for the scan bench: `n` notes, `mineFrac` of them ours. */
-    | { type: "feed"; n: number; mineFrac: number }
-    /**
-     * Pool for the sync bench, which pages over chains far larger than it could
-     * mint. The feed cycles `foreign` across every non-own row — trial-decrypt
-     * costs the same whether or not a row is unique — while `mine` stays
-     * distinct, because `NoteCache.addHits` dedupes by commitment and repeats
-     * would silently collapse the hit count.
-     */
-    | { type: "pool"; own: number; foreign: number };
+/**
+ * One shard of a feed: notes `[from, to)`, of which index `i` is ours when
+ * `i < mineBelow`. See `Minter.mint`.
+ */
+export interface NotegenRequest {
+    from: number;
+    to: number;
+    mineBelow: number;
+}
 
-/** Each success answers the request `type` it echoes. */
 export type NotegenResponse =
-    | { type: "feed"; ivk: string; inputs: WireScanInput[]; ms: number }
-    | { type: "pool"; ivk: string; mine: WireScanInput[]; foreign: WireScanInput[]; ms: number }
+    | { type: "minted"; ivk: string; inputs: WireScanInput[] }
     | { type: "error"; message: string };

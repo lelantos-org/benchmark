@@ -22,6 +22,7 @@ const IDEAL = profileByKey("ideal");
 const note = (i: number): ScanInput => ({
     ciphertext: Uint8Array.from({ length: 48 }, (_, k) => (i * 31 + k) & 0xff),
     epk: Uint8Array.from({ length: 32 }, (_, k) => (i * 17 + k) & 0xff),
+    clueR: Uint8Array.from({ length: 32 }, (_, k) => (i * 13 + k) & 0xff),
     cm: BigInt(i) * 0x1_0000_0001n + 7n,
     leafIndex: i,
     blockNumber: i,
@@ -78,6 +79,7 @@ describe("wire", () => {
             assert.deepEqual(page.inputs.map(i => i.cm), notes.map(n => n.cm));
             assert.deepEqual(page.inputs[1].ciphertext, notes[1].ciphertext);
             assert.deepEqual(page.inputs[1].epk, notes[1].epk);
+            assert.deepEqual(page.inputs[1].clueR, notes[1].clueR);
             assert.equal(page.inputs[1].leafIndex, 2);
         });
     }

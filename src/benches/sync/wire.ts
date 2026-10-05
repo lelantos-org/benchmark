@@ -34,7 +34,8 @@ export function rowTail(note: ScanInput): RowTail {
     return (
         `,"commitmentHex":"0x${note.cm.toString(16).padStart(64, "0")}"` +
         `,"ciphertextHex":"${bytesToHex(note.ciphertext)}"` +
-        `,"ephPubPackedHex":"${bytesToHex(note.epk)}"}`
+        `,"ephPubPackedHex":"${bytesToHex(note.epk)}"` +
+        `,"clueRPackedHex":"${bytesToHex(note.clueR)}"}`
     );
 }
 
@@ -91,6 +92,7 @@ export function decodePage(body: string, kind: SyncStrategyKind): DecodedPage {
         inputs[i] = {
             ciphertext: hexBytes(d.ciphertextHex, "$.ciphertextHex"),
             epk: hexBytes(d.ephPubPackedHex, "$.ephPubPackedHex"),
+            clueR: hexBytes(d.clueRPackedHex, "$.clueRPackedHex"),
             cm: hexToBigint(d.commitmentHex as string),
             leafIndex: d.leafIndex as number,
             blockNumber: d.blockNumber as number,

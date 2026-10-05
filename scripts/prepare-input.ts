@@ -25,23 +25,18 @@ import {
     toSpentNoteFromPath,
 } from "@lelantos-org/sdk/internal";
 import {
+    buildDiversifiedKeys,
     buildNoteCommitment,
     buildRho,
-    buildViewingKey,
     deriveIvk,
-    derivePkFromIvk,
+    deriveOutgoingKey,
     Jubjub,
     MerkleTree,
     type Note,
     type OutputAux,
     Poseidon,
 } from "@lelantos-org/sdk/primitives";
-import {
-    type AuxOutput,
-    auxDigest,
-    buildAuxForReal,
-    type OutputRecipient,
-} from "@lelantos-org/sdk/protocol";
+import { type AuxOutput, auxDigest, sealOutput } from "@lelantos-org/sdk/protocol";
 
 import { artifactNames, CIRCUITS, type Circuit } from "../shared/circuits.js";
 
@@ -80,8 +75,7 @@ function buildWitness(curves: Curves, circuit: Circuit): CircomTransactInput {
     const { P, J } = curves;
     const tree = new MerkleTree(P, circuit.depth);
     // Alice pays herself: she owns the spent note and receives every output.
-    const { ivk, pk_d, ck } = buildViewingKey(P, J, deriveIvk(P, ALICE_NSK));
-    const alice: OutputRecipient = { pk_d, pk: derivePkFromIvk(P, ivk, ALICE_DIVERSIFIER), ck };
+    const alice = buildDiversifiedKeys(P, J, deriveIvk(P, ALICE_NSK), ALICE_DIVERSIFIER);
 
     // Slot 0 spends a real note, whose commitment is its tree leaf; the rest
     // are dummies. A dummy skips Merkle membership, so only this one needs to
@@ -116,20 +110,23 @@ function buildWitness(curves: Curves, circuit: Circuit): CircomTransactInput {
     //
     // The circuit pins out_rho to DeriveRho(nullifier[0], j); any other value
     // fails the `out_rho[j] === out_rho_d[j].rho` constraint.
-    const outputs: Note[] = Array.from({ length: circuit.nOut }, (_, j) => ({
+    //
+    // Sealing yields each note with its encrypted payload: the clue witnesses
+    // are bound through the challenge, and the aux digest binds ephPub and
+    // ciphertext alongside them.
+    const nullifiers = inputs.map(i => i.nf);
+    const outgoingKey = deriveOutgoingKey(ALICE_NSK);
+    const sealed = Array.from({ length: circuit.nOut }, (_, j) => sealOutput(J, P, {
+        outgoingKey,
+        chainId: CHAIN_ID,
+        rho: buildRho(P, nullifiers[0], j),
         asset: ASSET,
         value: j === 0 ? IN_VALUE : 0n,
-        pk: alice.pk,
-        rho: buildRho(P, inputs[0].nf, j),
-        rcm: BigInt(10 + j),
+        recipient: alice,
+        nullifiers,
     }));
-
-    // Encrypted-note payloads: the clue witnesses are SNARK-bound, and the aux
-    // digest binds ephPub and ciphertext alongside them.
-    const aux = outputs.map((note, j) => buildAuxForReal(J, P, note, alice, {
-        esk: BigInt(0x1234 + j * 0x1111),
-        fmdR: BigInt(0x5678 + j * 0x1111),
-    }));
+    const outputs: Note[] = sealed.map(s => s.note);
+    const aux = sealed.map(s => s.aux);
 
     // A transfer withdraws nothing, and names no asset when `public_out` is zero.
     const baseInput = toCircomInput(P, {

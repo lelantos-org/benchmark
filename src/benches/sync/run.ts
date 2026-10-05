@@ -61,6 +61,7 @@ export async function warmUp(scanner: Scanner, pool: NotePool): Promise<void> {
         // buffers it is handed, detaching them. Clone, or the pool is spent.
         ciphertext: n.ciphertext.slice(),
         epk: n.epk.slice(),
+        clueR: n.clueR.slice(),
     }));
     await scanner.scan(pool.ivk, sample);
 }

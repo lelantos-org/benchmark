@@ -1,11 +1,11 @@
-// Main-thread client for the note generator worker.
+// Main-thread client for the note generator workers.
 
 import type { ScanInput } from "@lelantos-org/sdk/advanced";
 import { decodeInput } from "@lelantos-org/sdk/internal";
 
 import type { NotegenRequest, NotegenResponse } from "./protocol";
 
-type Answer<K extends NotegenRequest["type"]> = Extract<NotegenResponse, { type: K }>;
+type MintedShard = Extract<NotegenResponse, { type: "minted" }>;
 
 /** Notes minted once and reused across rows by the sync bench's feed. */
 export interface NotePool {
@@ -24,32 +24,60 @@ export interface NoteFeed {
 /** A minted value plus the time minting took, which no measured phase includes. */
 export type Minted<T> = T & { ms: number };
 
+/** Below this a shard costs more in worker and wasm startup than it saves. */
+const MIN_SHARD_NOTES = 256;
+
 /**
- * Runs one request against a one-shot generator worker, terminated once its
- * answer arrives. The worker plumbing — terminate on every exit, reject rather
- * than hang on a worker error — lives here once for both feeds.
+ * Splits `[0, n)` into contiguous, non-empty ranges, one per worker, using
+ * fewer workers than offered when the shards would fall under
+ * {@link MIN_SHARD_NOTES}.
  */
-function request<R extends NotegenRequest>(req: R): Promise<Answer<R["type"]>> {
-    const worker = new Worker(new URL("./notegen.worker.ts", import.meta.url), { type: "module" });
-    return new Promise<Answer<R["type"]>>((resolve, reject) => {
+export function shardRanges(n: number, workers: number): [from: number, to: number][] {
+    const shards = Math.max(1, Math.min(workers, Math.ceil(n / MIN_SHARD_NOTES)));
+    return Array.from({ length: shards }, (_, s) => [
+        Math.floor((s * n) / shards),
+        Math.floor(((s + 1) * n) / shards),
+    ]);
+}
+
+/** Resolves with the worker's one answer; rejects rather than hangs on a worker error. */
+function mintShard(worker: Worker, req: NotegenRequest): Promise<MintedShard> {
+    return new Promise<MintedShard>((resolve, reject) => {
         worker.addEventListener("message", ({ data }: MessageEvent<NotegenResponse>) => {
-            worker.terminate();
             if (data.type === "error") reject(new Error(data.message));
-            else if (data.type !== req.type) reject(new Error(`unexpected notegen response: ${data.type}`));
-            else resolve(data as Answer<R["type"]>);
+            else resolve(data);
         });
-        worker.addEventListener("error", e => {
-            worker.terminate();
-            reject(new Error(e.message || "note generator failed"));
-        });
+        worker.addEventListener("error", e => reject(new Error(e.message || "note generator failed")));
         worker.postMessage(req);
     });
 }
 
+/**
+ * Mints notes `[0, n)`, the first `mineBelow` of them decryptable, on one-shot
+ * workers that each take a contiguous shard.
+ */
+async function mint(n: number, mineBelow: number): Promise<Minted<NoteFeed>> {
+    const t0 = performance.now();
+    const ranges = shardRanges(n, navigator.hardwareConcurrency || 4);
+    const workers = ranges.map(() => new Worker(new URL("./notegen.worker.ts", import.meta.url), { type: "module" }));
+    try {
+        const shards = await Promise.all(
+            ranges.map(([from, to], s) => mintShard(workers[s], { from, to, mineBelow })),
+        );
+        return {
+            ivk: BigInt(shards[0].ivk),
+            inputs: shards.flatMap(s => s.inputs.map(decodeInput)),
+            ms: performance.now() - t0,
+        };
+    } finally {
+        // On a failure this also stops the shards still minting.
+        for (const worker of workers) worker.terminate();
+    }
+}
+
 /** Flat feed for the scan bench: `n` notes, `mineFrac` of them decryptable. */
-export async function mintFeed(n: number, mineFrac: number): Promise<Minted<NoteFeed>> {
-    const r = await request({ type: "feed", n, mineFrac });
-    return { ivk: BigInt(r.ivk), inputs: r.inputs.map(decodeInput), ms: r.ms };
+export function mintFeed(n: number, mineFrac: number): Promise<Minted<NoteFeed>> {
+    return mint(n, Math.round(n * mineFrac));
 }
 
 /**
@@ -58,14 +86,10 @@ export async function mintFeed(n: number, mineFrac: number): Promise<Minted<Note
  * `foreign` is small on purpose: the sync bench pages over chains of hundreds
  * of thousands of notes, which it could not mint, and trial-decrypt costs the
  * same on a repeated ciphertext as on a fresh one. `SyntheticNoteSource` cycles
- * these across rows.
+ * these across rows. `mine` stays distinct, because `NoteCache.addHits` dedupes
+ * by commitment and repeats would silently collapse the hit count.
  */
 export async function mintPool(own: number, foreign: number): Promise<Minted<NotePool>> {
-    const r = await request({ type: "pool", own, foreign });
-    return {
-        ivk: BigInt(r.ivk),
-        mine: r.mine.map(decodeInput),
-        foreign: r.foreign.map(decodeInput),
-        ms: r.ms,
-    };
+    const { ivk, inputs, ms } = await mint(own + foreign, own);
+    return { ivk, mine: inputs.slice(0, own), foreign: inputs.slice(own), ms };
 }
