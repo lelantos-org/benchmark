@@ -152,15 +152,65 @@ adds one hash per level above the last full one, so it barely moves the times.
 
 ## Reference results
 
-All numbers below predate circuits 0.11, which replaced the 2x2/3x3/4x4 set with
-a single 4x6 arity at Merkle depth 11. They are kept as a record of the older
-circuits and are not comparable to a 4x6 run; `results.json` likewise still holds
-those rows, which the chart skips and the table shows under their own shape.
+Recorded 2026-10-07 against SDK 0.47.0 and circuits 0.20.0, over HTTPS on a LAN.
+The circuit is `Transact(11, 4, 6)` compiled at `--O2`: 28,775 constraints, FFT
+domain 2^15. Each row is one run: 5 timed iterations, warm-up excluded.
+*Artifacts* is the `cachedArtifacts` flag — whether the SDK's Cache API already
+held the zkey.
 
-Recorded 2026-08-25 against SDK 0.20.0 and circuits 0.10.0, over HTTPS on a LAN.
-Each row is one run: 5 timed iterations, warm-up excluded. *Artifacts* is the
-`cachedArtifacts` flag — whether the SDK's Cache API already held the zkey; every
-row in this session was a cold fetch.
+| Device | Shape | Artifacts | Mean | Median | Min | Max | Prepare |
+|---|---|---|---|---|---|---|---|
+| macOS · Chrome 154 · 16 cores | 4x6 | cold | **230 ms** | 233 | 219 | 234 | 292 ms |
+| iPhone · iOS 18.5 Safari · 4 cores | 4x6 | cold | **1,015 ms** | 1,021 | 996 | 1,033 | 3,039 ms |
+| iPhone · iOS 18.5 Safari · 4 cores | 4x6 | warm | **1,012 ms** | 1,008 | 986 | 1,040 | 173 ms |
+
+A warm cache does not change the prove. It takes *prepare* on the iPhone from
+~3 s to 173 ms: the 33 MB zkey and the witness wasm come from the Cache API
+instead of the network.
+
+### Where prove time goes
+
+Per-iteration medians of the `lelantos:prover:wasm` records from the runs above —
+logged at `debug` and posted to `results.json` with each row.
+
+| Device | Threads | Witness | Groth16 | Total |
+|---|---|---|---|---|
+| macOS | 16 | 76 ms | 156 ms | ~233 ms |
+| iPhone, cold | 4 | 75 ms | 946 ms | ~1,021 ms |
+| iPhone, warm | 4 | 78 ms | 931 ms | ~1,008 ms |
+
+Witness generation is single-threaded and costs the same ~75 ms on both devices.
+Groth16 is the parallel part: a third of the prove is witness on the 16-thread
+Mac, 7% on the 4-thread iPhone.
+
+### Against the `--O1` circuit
+
+The last runs before circuits 0.20.0, 2026-10-04 and 2026-10-05, proved the same
+4x6 statement compiled at `--O1`: just under 70,000 constraints, domain 2^17.
+Rows do not record the SDK or circuits version; these are matched by date. The
+Mac ran Chrome 153 then and 154 now.
+
+| Device | | `--O1` | `--O2` | Speedup |
+|---|---|---|---|---|
+| macOS · 16 threads | Prove, mean | 386 ms | 230 ms | 1.7x |
+| | Groth16 | 305–312 ms | 156 ms | 2.0x |
+| | Witness | 72–73 ms | 76 ms | — |
+| iPhone · 4 threads | Prove, mean | 2,373–2,572 ms | 1,012–1,015 ms | 2.3–2.5x |
+| | Groth16 | 2,259–2,422 ms | 931–946 ms | 2.4–2.6x |
+| | Witness | 90–137 ms | 75–78 ms | — |
+
+The gain is all in Groth16. Witness time stays at ~75 ms, so on the Mac it caps
+the total at 1.7x while Groth16 itself halves.
+
+### Earlier circuit sets
+
+The numbers below predate circuits 0.11, which replaced the 2x2/3x3/4x4 set with
+a single 4x6 arity at Merkle depth 11. They are not comparable to a 4x6 run;
+`results.json` still holds those rows, which the chart skips and the table shows
+under their own shape.
+
+Recorded 2026-08-25 against SDK 0.20.0 and circuits 0.10.0. Every row in this
+session was a cold fetch.
 
 | Device | Shape | Artifacts | Mean | Median | Min | Max | Prepare |
 |---|---|---|---|---|---|---|---|
@@ -187,10 +237,8 @@ the only rows here with warm artifacts:
 The two sessions are not comparable run-for-run: the SDK got materially faster in
 between.
 
-### Where prove time goes
-
-Per-iteration medians of the `lelantos:prover:wasm` records from the runs above —
-logged at `debug` and posted to `results.json` with each row.
+Per-iteration medians of the `lelantos:prover:wasm` records from the 2026-08-25
+runs.
 
 macOS · 16 threads:
 
